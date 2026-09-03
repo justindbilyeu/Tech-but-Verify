@@ -80,7 +80,7 @@ NODE_PATH=$(npm root -g) node tools/test-pages.js
 
 `tools/test-pages.js` drives both pages in a real browser: validation, the full
 submit flow, the exact payload the function will receive, hostile input, and the
-dashboard's populated / empty / rate-limited / offline states. 112 assertions
+dashboard's populated / empty / rate-limited / offline states. 118 assertions
 across the function and browser suites, all passing.
 
 The checklist wording lives in two places — `checklist-items.json` (canonical,
@@ -171,14 +171,29 @@ phone's clock is whatever the phone says it is.
   boss on a roof needs to know whether to start work, not to read "something
   went wrong".
 
+## Branding
+
+The mark at [`docs/assets/tcr_logo.png`](docs/assets/tcr_logo.png) is the real
+one, extracted from page 1 of `TCR_Purpose_Statement_and_Values.pdf` with its
+soft mask applied, trimmed to the artwork and sized for a phone (900 × 396,
+transparent, 58 KB). Brand colors are sampled from it: red `#BA1313`, black
+`#161515`.
+
+**Both mastheads are white, and that is deliberate.** The logo is not all-red —
+"ROOFING" is pure black, and so is the house silhouette under the roofline. On
+the dark header this originally had, both vanished and roughly half the mark
+went missing invisibly. White is the background the mark was drawn for; the
+tests assert the masthead stays light so a future restyle fails loudly instead
+of quietly mangling the logo. A dark header would need a light-on-dark variant
+from whoever holds the source artwork.
+
+Type is Fraunces + Spline Sans, matching CarrierCalc, so the tools look related.
+
 ## Known gaps
 
-- **The logo is missing.** The spec said `tcr_logo.png` was included in the
-  delivery; no such file arrived, so there was nothing to commit. Both pages
-  reference `assets/tcr_logo.png` and fall back to a CSS/SVG wordmark until it
-  exists. Dropping the real PNG at `docs/assets/tcr_logo.png` is the whole fix —
-  no code change. See [`docs/assets/README.md`](docs/assets/README.md), which
-  also explains why it is `docs/assets/` and not the repo root.
+- ~~The logo is missing.~~ Resolved — the real mark is committed at
+  [`docs/assets/tcr_logo.png`](docs/assets/tcr_logo.png), extracted from
+  `TCR_Purpose_Statement_and_Values.pdf` with its transparency intact.
 - **Nothing is deployed.** Deploy steps 1, 2, 4 and 5 above need account access.
 - **Anyone who knows the endpoint can post a submission.** There is no
   authentication and no rate limit; a name is just typed in. Fine for a

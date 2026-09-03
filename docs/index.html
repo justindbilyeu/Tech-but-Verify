@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Pre-Job Checklist · Texas Choice Roofing</title>
-<meta name="theme-color" content="#161515">
+<meta name="theme-color" content="#ffffff">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -35,20 +35,26 @@ html{-webkit-text-size-adjust:100%}
 body{
   margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink);
   line-height:1.5;-webkit-font-smoothing:antialiased;
-  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  /* Replaced with a measured value by padForActionBar(); this is just a
+     close-enough starting point so nothing jumps before the script runs. */
+  padding-bottom:calc(130px + env(safe-area-inset-bottom));
 }
 
 /* ── Masthead ────────────────────────────────────────────────────────────── */
+/* The masthead is light on purpose. In the logo, "ROOFING" and the house
+   silhouette under the roofline are solid black (#000) -- on a dark band those
+   parts of the mark simply disappear, leaving the red Texas shape floating on
+   its own. White is the background this mark was drawn for. */
 .masthead{
-  background:var(--black);padding:26px 20px 22px;text-align:center;
+  background:#fff;padding:22px 20px 18px;text-align:center;
   border-bottom:4px solid var(--red);
 }
-.masthead img{display:block;margin:0 auto;max-width:220px;width:100%;height:auto}
+.masthead img{display:block;margin:0 auto;max-width:260px;width:100%;height:auto}
 /* Shown only if the real logo file is missing. See docs/assets/README.md. */
 .wordmark{display:inline-block;text-align:center;line-height:1}
 .wordmark .roofline{display:block;margin:0 auto 8px;width:74px;height:20px}
 .wordmark .l1{
-  font-family:var(--f-display);font-weight:600;font-size:1.45rem;color:#fff;
+  font-family:var(--f-display);font-weight:600;font-size:1.45rem;color:var(--black);
   letter-spacing:.02em;display:block;
 }
 .wordmark .l2{
@@ -56,8 +62,8 @@ body{
   text-transform:uppercase;color:var(--red);display:block;margin-top:6px;padding-left:.42em;
 }
 .eyebrow{
-  margin:16px 0 0;font-size:.7rem;font-weight:600;letter-spacing:.24em;
-  text-transform:uppercase;color:#b9b2b2;
+  margin:15px 0 0;font-size:.7rem;font-weight:600;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--muted);
 }
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
@@ -419,6 +425,19 @@ footer a{color:var(--muted)}
         : left + ' items still need confirming — they are highlighted above.';
     }
   }
+  // The action bar is fixed, so the page needs room to scroll past it. Measure
+  // it rather than trusting a hard-coded height: the bar is 122px here, and a
+  // late-loading font or a wrapped label moves that around.
+  function padForActionBar() {
+    if (document.body.classList.contains('submitted')) return;
+    document.body.style.paddingBottom = ($('actionbar').offsetHeight + 18) + 'px';
+  }
+  padForActionBar();
+  window.addEventListener('resize', padForActionBar);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(padForActionBar).catch(function () {});
+  }
+
   ['crewBossName', 'jobAddress'].forEach(function (id) {
     $(id).addEventListener('input', function () {
       this.closest('.field').classList.remove('bad');
@@ -510,6 +529,7 @@ footer a{color:var(--muted)}
       form.classList.add('hide');
       $('intro').classList.add('hide');
       $('actionbar').classList.add('hide');
+      document.body.classList.add('submitted');
       document.body.style.paddingBottom = '0';
       $('d-name').textContent = name;
       $('d-addr').textContent = addr;

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Checklist History · Texas Choice Roofing</title>
-<meta name="theme-color" content="#161515">
+<meta name="theme-color" content="#ffffff">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -36,17 +36,20 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink);
   line-height:1.5;-webkit-font-smoothing:antialiased}
 
-.masthead{background:var(--black);padding:22px 20px 18px;text-align:center;
+/* Light for the same reason as the checklist page: the black parts of the
+   mark (the "ROOFING" wordmark, the house under the roofline) vanish on a
+   dark band. */
+.masthead{background:#fff;padding:20px 20px 16px;text-align:center;
   border-bottom:4px solid var(--red)}
-.masthead img{display:block;margin:0 auto;max-width:180px;width:100%;height:auto}
+.masthead img{display:block;margin:0 auto;max-width:230px;width:100%;height:auto}
 .wordmark{display:inline-block;text-align:center;line-height:1}
 .wordmark .roofline{display:block;margin:0 auto 7px;width:62px;height:17px}
-.wordmark .l1{font-family:var(--f-display);font-weight:600;font-size:1.2rem;color:#fff;
-  letter-spacing:.02em;display:block}
+.wordmark .l1{font-family:var(--f-display);font-weight:600;font-size:1.2rem;
+  color:var(--black);letter-spacing:.02em;display:block}
 .wordmark .l2{font-family:var(--f-body);font-weight:700;font-size:.63rem;letter-spacing:.42em;
   text-transform:uppercase;color:var(--red);display:block;margin-top:5px;padding-left:.42em}
-.eyebrow{margin:14px 0 0;font-size:.68rem;font-weight:600;letter-spacing:.24em;
-  text-transform:uppercase;color:#b9b2b2}
+.eyebrow{margin:13px 0 0;font-size:.68rem;font-weight:600;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--muted)}
 
 .wrap{max-width:1000px;margin:0 auto;padding:18px 14px 40px}
 

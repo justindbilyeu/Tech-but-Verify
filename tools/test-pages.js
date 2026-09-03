@@ -61,8 +61,22 @@ const check = (label, cond, extra) => {
   await page.waitForTimeout(300);
   check('no page errors', errors.length === 0, errors.join(' | '));
   check('title', (await page.title()).includes('Pre-Job Checklist'));
-  check('logo fallback wordmark shows when png missing',
-    await page.locator('#wordmark').isVisible());
+  const logo = await page.locator('#logo').evaluate((el) => ({
+    shown: !!el.offsetParent || getComputedStyle(el).display !== 'none',
+    w: el.naturalWidth, h: el.naturalHeight,
+    render: Math.round(el.getBoundingClientRect().width)
+  }));
+  check('real logo decoded', logo.w === 900 && logo.h === 396,
+    logo.w + 'x' + logo.h);
+  check('logo rendered at a sane width', logo.render >= 200 && logo.render <= 260, logo.render);
+  check('wordmark fallback stays hidden while the png loads',
+    !(await page.locator('#wordmark').isVisible()));
+  // The mark's "ROOFING" and the house silhouette are solid black, so a dark
+  // masthead would hide half of it. Guard the light background.
+  const mastBg = await page.locator('.masthead')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  check('masthead is light so the black parts of the mark are visible',
+    mastBg === 'rgb(255, 255, 255)', mastBg);
   check('eyebrow label present',
     (await page.locator('.eyebrow').textContent()).trim() === 'Pre-job crew boss checklist');
   check('prototype banner visible', await page.locator('.proto').isVisible());
@@ -103,6 +117,17 @@ const check = (label, cond, extra) => {
   check('row spans the column', box.width > 300, box.width);
   const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
   check('no horizontal overflow at 390px', scrollW <= 390, scrollW);
+  // Regression: the fixed action bar is 122px tall and was covering the footer
+  // when the bottom padding was a hard-coded 96px.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(150);
+  const clearance = await page.evaluate(() => {
+    const ab = document.querySelector('.actionbar').getBoundingClientRect();
+    const f = document.querySelector('footer').getBoundingClientRect();
+    return Math.round(ab.top - f.bottom);
+  });
+  check('footer scrolls clear of the fixed action bar', clearance >= 0, clearance);
+  await page.evaluate(() => window.scrollTo(0, 0));
 
   console.log('\n4. validation blocks an empty submit');
   await page.locator('#submit').click();
@@ -245,6 +270,11 @@ const check = (label, cond, extra) => {
   await d.waitForTimeout(700);
 
   check('no page errors', derr.length === 0, derr.join(' | '));
+  const dLogo = await d.locator('#logo').evaluate((el) => el.naturalWidth);
+  check('dashboard logo decoded', dLogo === 900, dLogo);
+  const dMast = await d.locator('.masthead')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  check('dashboard masthead is light', dMast === 'rgb(255, 255, 255)', dMast);
   check('3 rows rendered', await d.locator('.srow').count() === 3,
     await d.locator('.srow').count());
   const order = await d.locator('.srow .who').allTextContents();
