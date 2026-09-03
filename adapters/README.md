@@ -13,7 +13,36 @@ mode is that a fix exists and cannot be deployed.
 So the handler stays portable, and where it runs becomes a deploy decision
 rather than a rewrite.
 
-## Deploy to Cloudflare Workers
+## Deploy with no terminal (from a phone, if it comes to that)
+
+[`dist/submit-checklist.worker.mjs`](dist/submit-checklist.worker.mjs) is the
+adapter and the handler flattened into one file. Nothing to install.
+
+1. Cloudflare dashboard -> **Workers & Pages** -> **Create** -> Hello World -> Deploy
+2. **Edit code**, select all, paste that file over it, **Deploy**
+3. **Settings -> Variables**:
+
+   | Name | Type | Value |
+   |---|---|---|
+   | `GITHUB_TOKEN` | Secret | fine-grained PAT, Contents read+write on this repo |
+   | `GITHUB_REPO` | Secret | `justindbilyeu/Tech-but-Verify` |
+   | `CREW_PINS` | Secret | optional; JSON, and malformed still fails closed |
+   | `ALLOWED_ORIGIN` | Text | `https://justindbilyeu.github.io` |
+
+4. Copy the worker's URL into `ENDPOINT` in `docs/index.html`
+
+The bundle is generated and committed, and `npm test` fails if it has gone
+stale — it is the file someone copies out of GitHub believing it is the code
+that passed the tests, so it had better be. The full end-to-end suite runs
+against the bundle as well as the sources, because a bundler that drops an
+export would otherwise leave every source test passing and the deployed thing
+broken.
+
+```bash
+npm run build:worker     # rebuild it after changing the handler
+```
+
+## Deploy with wrangler
 
 ```bash
 npx wrangler deploy --config adapters/wrangler.toml
