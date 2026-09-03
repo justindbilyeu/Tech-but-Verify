@@ -14,6 +14,18 @@ const fs = require('fs');
 // Screenshots land in OUT.
 
 const ROOT = path.join(__dirname, '..');
+
+// The endpoint the page actually ships with. Read from the file rather than
+// typed here: these intercepts have to listen on whatever the page posts to,
+// and a hard-coded copy that drifts makes eleven tests fail for a reason that
+// has nothing to do with what broke.
+const ENDPOINT = (function () {
+  const src = fs.readFileSync(path.join(ROOT, 'docs', 'index.html'), 'utf8');
+  const m = /var ENDPOINT = '([^']+)'/.exec(src);
+  if (!m) throw new Error('could not find ENDPOINT in docs/index.html');
+  return m[1];
+})();
+const ENDPOINT_GLOB = ENDPOINT.replace(/\/+$/, '') + '**';
 const DOCS = path.join(ROOT, 'docs');
 const OUT = process.env.OUT || require('os').tmpdir();
 const CANON = require(path.join(ROOT, 'checklist-items.json'));
@@ -48,7 +60,7 @@ const check = (label, cond, extra) => {
   await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
 
   let posted = null;
-  await page.route('https://juiceworks-api.netlify.app/**', async (route) => {
+  await page.route(ENDPOINT_GLOB, async (route) => {
     posted = JSON.parse(route.request().postData());
     await route.fulfill({
       status: 200, contentType: 'application/json',
@@ -228,7 +240,7 @@ const check = (label, cond, extra) => {
   await p2.route('https://fonts.g**/**', (r) => r.abort());
   let popped = false;
   p2.on('dialog', async (d) => { popped = true; await d.dismiss(); });
-  await p2.route('https://juiceworks-api.netlify.app/**', (r) =>
+  await p2.route(ENDPOINT_GLOB, (r) =>
     r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
   await p2.goto('file://' + path.join(DOCS, 'index.html'));
   await p2.fill('#crewBossName', '<img src=x onerror=alert(1)>');
@@ -255,7 +267,7 @@ const check = (label, cond, extra) => {
     await pp.setViewportSize({ width: 390, height: 844 });
     await pp.route('https://fonts.g**/**', (r) => r.abort());
     let sent = null, replyWith = { status: 401, body: { error: 'That PIN was not recognised. Check it and try again, or call the office.' } };
-    await pp.route('https://juiceworks-api.netlify.app/**', async (route) => {
+    await pp.route(ENDPOINT_GLOB, async (route) => {
       sent = JSON.parse(route.request().postData());
       await route.fulfill({ status: replyWith.status, contentType: 'application/json',
         body: JSON.stringify(replyWith.body) });
@@ -308,8 +320,17 @@ const check = (label, cond, extra) => {
   const shipped = fs.readFileSync(path.join(DOCS, 'index.html'), 'utf8');
   check('shipped page has PIN mode off (demo stays unblocked)',
     /var PIN_REQUIRED = false;/.test(shipped));
-  check('shipped page posts to the juiceworks-api site',
-    /var ENDPOINT = 'https:\/\/juiceworks-api\.netlify\.app\/submit-checklist';/.test(shipped));
+  // Deliberately strict about the shape rather than the host: the endpoint is
+  // allowed to move (it just did, off Netlify), but it must stay an absolute
+  // https URL that the page hard-codes. A relative path or a URL taken from the
+  // query string would let anyone hand a crew boss a link that quietly posts
+  // the crew's details somewhere else.
+  check('the shipped page hard-codes an https endpoint',
+    /var ENDPOINT = 'https:\/\/[^']+';/.test(shipped), ENDPOINT);
+  check('and it is the one the tests exercised',
+    shipped.includes("var ENDPOINT = '" + ENDPOINT + "';"));
+  check('the endpoint is not built from anything the page was handed',
+    !/var ENDPOINT = [^;]*(location|search|params|href)/.test(shipped));
 
   // ── iPad ─────────────────────────────────────────────────────────────────
   // This gets handed to a crew boss on an iPad Pro, so the layout has to hold

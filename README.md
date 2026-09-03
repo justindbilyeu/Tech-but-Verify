@@ -36,9 +36,11 @@ GitHub Contents API write.
 
 ## Deploying
 
-The function goes on the **existing juiceworks-api Netlify site**, next to
-CarrierCalc's `/lead` endpoint — one site, one set of env vars, one bill. The
-two pages are served by GitHub Pages from this repo.
+**The function runs on Cloudflare Workers**, at
+`https://tcr-checklist.justindbilyeu.workers.dev`, deployed from `adapters/` on
+every push to `main`. The two pages are served by GitHub Pages from this repo.
+Netlify is no longer in the path — see [`adapters/`](adapters/) for why and for
+the Netlify instructions, which still work if you want them.
 
 **1. Copy the function across.** Drop
 [`netlify/functions/submit-checklist.js`](netlify/functions/submit-checklist.js)
@@ -74,7 +76,7 @@ branch*, branch `main`, folder `/docs`.
 **5. Run one end-to-end test.** Submit from a phone, confirm the record lands in
 `data/submissions/` and shows on the dashboard.
 
-The page already points at `https://juiceworks-api.netlify.app/submit-checklist`,
+The page points at `https://tcr-checklist.justindbilyeu.workers.dev`,
 so no code change is needed if the site keeps that domain.
 
 > Steps 1–5 need account access and a token, so they have **not** been done —
@@ -271,7 +273,7 @@ function to proxy the reads with the token (an hour or two, not a redesign).
 **PINs: built, switched off.** Per-crew-boss PINs are implemented end to end and
 default to off, so today's demo is unblocked. See below to turn them on.
 
-**The function lives on the juiceworks-api site**, next to CarrierCalc's
+**The function was originally deployed to the juiceworks-api site**, next to CarrierCalc's
 `/lead`. It is self-contained specifically so that move is a one-file copy.
 
 **Retention is still open.** Every submission is a git commit, so "delete after
@@ -283,7 +285,8 @@ records cut both ways in a dispute.
 
 Off by default. To turn them on, do **both** of these together:
 
-1. Set `CREW_PINS` on the juiceworks-api site to a JSON map of PIN to name:
+1. Set `CREW_PINS` on the Worker (Settings -> Variables and Secrets, as a
+   **Secret**) to a JSON map of PIN to name:
    `{"481027":"John Smith","730914":"Ana Reyes"}`
 2. Flip `PIN_REQUIRED` to `true` in `docs/index.html`.
 
