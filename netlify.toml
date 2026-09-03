@@ -1,0 +1,19 @@
+# Netlify hosts one thing: the function that holds the GitHub token.
+# GitHub Pages (serving /docs) is the canonical home for the two pages.
+#
+# `publish` still points at docs/ deliberately -- Netlify's default would
+# publish the repo root, which would put data/submissions/ and this config on a
+# second public URL. Publishing docs/ instead means the Netlify domain serves a
+# working same-origin copy of the form, which is handy for testing before the
+# Pages URL is wired up.
+
+[build]
+  publish = "docs"
+  functions = "netlify/functions"
+
+# Gives the function the clean path the page posts to, matching the
+# CarrierCalc convention of /lead rather than /.netlify/functions/lead.
+[[redirects]]
+  from = "/submit-checklist"
+  to = "/.netlify/functions/submit-checklist"
+  status = 200

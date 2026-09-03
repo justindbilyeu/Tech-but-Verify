@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Pre-Job Checklist · Texas Choice Roofing</title>
+<meta name="theme-color" content="#161515">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#BA1313;          /* sampled from the logo */
+  --red-dark:#8E0F0F;
+  --red-wash:#fbeded;
+  --black:#161515;        /* sampled from the logo */
+  --ink:#221f1f;
+  --ink-soft:#4b4646;
+  --muted:#736d6d;
+  --line:#e3ddd8;
+  --line-soft:#efeae6;
+  --paper:#f4f2ef;
+  --card:#ffffff;
+  --amber:#8a5a00;
+  --amber-wash:#fdf7e8;
+  --amber-line:#e8d5a3;
+  --good:#15803d;
+  --f-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --f-body:'Spline Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --shadow:0 1px 2px rgba(22,21,21,.05),0 6px 20px rgba(22,21,21,.06);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink);
+  line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+
+/* ── Masthead ────────────────────────────────────────────────────────────── */
+.masthead{
+  background:var(--black);padding:26px 20px 22px;text-align:center;
+  border-bottom:4px solid var(--red);
+}
+.masthead img{display:block;margin:0 auto;max-width:220px;width:100%;height:auto}
+/* Shown only if the real logo file is missing. See docs/assets/README.md. */
+.wordmark{display:inline-block;text-align:center;line-height:1}
+.wordmark .roofline{display:block;margin:0 auto 8px;width:74px;height:20px}
+.wordmark .l1{
+  font-family:var(--f-display);font-weight:600;font-size:1.45rem;color:#fff;
+  letter-spacing:.02em;display:block;
+}
+.wordmark .l2{
+  font-family:var(--f-body);font-weight:700;font-size:.72rem;letter-spacing:.42em;
+  text-transform:uppercase;color:var(--red);display:block;margin-top:6px;padding-left:.42em;
+}
+.eyebrow{
+  margin:16px 0 0;font-size:.7rem;font-weight:600;letter-spacing:.24em;
+  text-transform:uppercase;color:#b9b2b2;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.wrap{max-width:640px;margin:0 auto;padding:18px 14px 0}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;
+}
+.card-head{padding:16px 18px 0}
+.card-head h2{
+  margin:0;font-family:var(--f-body);font-size:.74rem;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--red);
+}
+.card-head .rule{height:2px;background:var(--red);width:34px;margin-top:9px;border-radius:2px}
+
+/* ── Prototype banner ────────────────────────────────────────────────────── */
+.proto{
+  background:var(--amber-wash);border:1px solid var(--amber-line);
+  border-left:4px solid var(--amber);border-radius:10px;
+  padding:13px 15px;margin-bottom:16px;font-size:.86rem;color:#5c3d00;
+}
+.proto b{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:5px}
+
+/* ── Intro ───────────────────────────────────────────────────────────────── */
+.intro{padding:0 4px 16px;font-size:.93rem;color:var(--ink-soft)}
+.intro h1{
+  font-family:var(--f-display);font-weight:600;font-size:clamp(1.35rem,5.2vw,1.75rem);
+  margin:0 0 8px;color:var(--black);line-height:1.2;letter-spacing:-.01em;
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.fields{padding:16px 18px 18px}
+.field+.field{margin-top:15px}
+.field label{display:block;font-size:.83rem;font-weight:600;margin-bottom:6px;color:var(--ink)}
+.field input{
+  width:100%;font:inherit;font-size:1rem;padding:13px 14px;color:var(--ink);
+  background:#fdfcfb;border:1.5px solid var(--line);border-radius:9px;
+}
+.field input:focus{outline:none;border-color:var(--red);background:#fff;
+  box-shadow:0 0 0 3px var(--red-wash)}
+.field.bad input{border-color:var(--red);background:#fffafa}
+.err{display:none;margin:6px 0 0;font-size:.82rem;font-weight:500;color:var(--red)}
+.err.show{display:block}
+
+/* ── Checklist rows ──────────────────────────────────────────────────────── */
+.items{list-style:none;margin:14px 0 0;padding:0}
+.items li{border-top:1px solid var(--line-soft)}
+.row{
+  display:flex;align-items:flex-start;gap:14px;padding:15px 18px;min-height:58px;
+  cursor:pointer;font-size:.95rem;color:var(--ink);
+  -webkit-tap-highlight-color:transparent;transition:background .12s;
+}
+.row:active{background:#faf7f6}
+.row input{position:absolute;opacity:0;width:1px;height:1px}
+.box{
+  flex:none;width:28px;height:28px;margin-top:-1px;border:2px solid #cfc8c2;
+  border-radius:7px;background:#fff;display:grid;place-items:center;transition:all .14s;
+}
+.box svg{width:17px;height:17px;stroke:#fff;stroke-width:3.2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);
+  transition:all .14s}
+.row input:checked+.box{background:var(--red);border-color:var(--red)}
+.row input:checked+.box svg{opacity:1;transform:scale(1)}
+.row input:focus-visible+.box{box-shadow:0 0 0 3px var(--red-wash);border-color:var(--red)}
+.row input:checked~.txt{color:var(--ink-soft)}
+.txt{padding-top:3px}
+.items li.bad .row{background:#fffafa}
+.items li.bad .box{border-color:var(--red)}
+
+/* ── Legal placeholders ──────────────────────────────────────────────────── */
+.items li.ph{border-top:none}
+.pending{padding:14px 18px;margin:10px 12px 12px;background:#fbfaf9;
+  border:2px dashed #cfc8c2;border-radius:10px}
+.pending .tag{
+  display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);background:#efeae6;
+  border-radius:999px;padding:4px 9px;margin-bottom:8px;
+}
+.pending p{margin:0;font-size:.88rem;color:var(--muted);font-style:italic}
+
+/* ── Action bar ──────────────────────────────────────────────────────────── */
+.actionbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(255,255,255,.97);
+  backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+}
+.actionbar .inner{max-width:640px;margin:0 auto}
+.progress{display:flex;align-items:center;justify-content:space-between;
+  font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:9px}
+.progress .count{color:var(--ink)}
+.bar{height:4px;background:var(--line-soft);border-radius:99px;overflow:hidden;margin-bottom:11px}
+.bar i{display:block;height:100%;width:0;background:var(--red);border-radius:99px;
+  transition:width .25s ease}
+.bar.done i{background:var(--good)}
+.btn{
+  width:100%;font:inherit;font-size:1rem;font-weight:700;letter-spacing:.02em;
+  padding:15px;border:none;border-radius:10px;background:var(--red);color:#fff;
+  cursor:pointer;transition:background .15s;
+}
+.btn:hover{background:var(--red-dark)}
+.btn:disabled{background:#b9b2b2;cursor:default}
+.btn.idle{background:var(--black)}
+.btn.idle:hover{background:#2c2929}
+
+/* ── Success ─────────────────────────────────────────────────────────────── */
+.done{display:none;padding:26px 20px;text-align:center}
+.done.show{display:block}
+.done .tick{width:56px;height:56px;margin:0 auto 14px;border-radius:50%;
+  background:var(--good);display:grid;place-items:center}
+.done .tick svg{width:28px;height:28px;stroke:#fff;stroke-width:3.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.done h2{font-family:var(--f-display);font-weight:600;font-size:1.4rem;margin:0 0 8px;
+  color:var(--black)}
+.done p{margin:0 0 4px;font-size:.92rem;color:var(--ink-soft)}
+.done dl{margin:18px auto 0;max-width:340px;text-align:left;font-size:.88rem;
+  border-top:1px solid var(--line-soft)}
+.done dt{font-weight:600;color:var(--muted);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin-top:12px}
+.done dd{margin:3px 0 0;color:var(--ink);word-break:break-word}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer{max-width:640px;margin:0 auto;padding:6px 18px 26px;font-size:.78rem;
+  color:var(--muted);text-align:center}
+footer a{color:var(--muted)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <!-- The real mark. If assets/tcr_logo.png is not yet committed, the CSS
+       wordmark below stands in so a demo never shows a broken image. -->
+  <img id="logo" src="assets/tcr_logo.png" alt="Texas Choice Roofing"
+       onerror="this.remove();document.getElementById('wordmark').classList.remove('hide')">
+  <span class="wordmark hide" id="wordmark" role="img" aria-label="Texas Choice Roofing">
+    <svg class="roofline" viewBox="0 0 74 20" aria-hidden="true">
+      <path d="M4 17 L37 3 L70 17" fill="none" stroke="#BA1313" stroke-width="4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="l1">Texas Choice</span>
+    <span class="l2">Roofing</span>
+  </span>
+  <p class="eyebrow">Pre-job crew boss checklist</p>
+</header>
+
+<div class="wrap">
+
+  <div class="proto">
+    <b>Prototype — not legally reviewed</b>
+    This form is for internal testing only. The checklist language and the
+    independent-contractor framing have not been reviewed by counsel, so nothing
+    here should be relied on as a binding agreement or as a real job sign-off.
+  </div>
+
+  <div class="intro" id="intro">
+    <h1>Before the crew starts</h1>
+    <p>This is the standard Texas Choice Roofing holds itself to on every job.
+       Walk the site, confirm each line, and submit. It takes about a minute and
+       gives the office a record that the job started right.</p>
+  </div>
+
+  <form id="form" novalidate>
+
+    <section class="card">
+      <div class="card-head"><h2>Job details</h2><div class="rule"></div></div>
+      <div class="fields">
+        <div class="field" id="f-name">
+          <label for="crewBossName">Crew boss name</label>
+          <input type="text" id="crewBossName" name="crewBossName" autocomplete="name"
+                 enterkeyhint="next" maxlength="80" required>
+          <p class="err" id="e-name"></p>
+        </div>
+        <div class="field" id="f-addr">
+          <label for="jobAddress">Job address</label>
+          <input type="text" id="jobAddress" name="jobAddress" autocomplete="street-address"
+                 enterkeyhint="done" maxlength="200" required>
+          <p class="err" id="e-addr"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories are rendered from the CHECKLIST array below so the item text
+         on the page is byte-identical to what the function validates. -->
+    <div id="sections"></div>
+
+    <p class="err" id="e-form" style="text-align:center;margin:0 0 14px"></p>
+  </form>
+
+  <section class="card done" id="done">
+    <div class="tick"><svg viewBox="0 0 24 24"><path d="M4 12.5 L9.5 18 L20 6.5"/></svg></div>
+    <h2>Checklist recorded</h2>
+    <p>Thanks — the office has it. Have a good job.</p>
+    <dl>
+      <dt>Crew boss</dt><dd id="d-name"></dd>
+      <dt>Job address</dt><dd id="d-addr"></dd>
+      <dt>Submitted</dt><dd id="d-time"></dd>
+    </dl>
+  </section>
+
+</div>
+
+<div class="actionbar" id="actionbar">
+  <div class="inner">
+    <div class="progress">
+      <span>Confirmed</span>
+      <span class="count"><span id="p-now">0</span> of <span id="p-all">0</span></span>
+    </div>
+    <div class="bar" id="bar"><i id="bar-fill"></i></div>
+    <button class="btn idle" type="submit" form="form" id="submit">Submit checklist</button>
+  </div>
+</div>
+
+<footer>
+  Texas Choice Roofing · internal prototype ·
+  <a href="dashboard.html">submission history</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Where submissions go ───────────────────────────────────────────────────
+  // The Netlify function in /netlify/functions/submit-checklist.js. Set this to
+  // your deployed site once `netlify deploy` gives you a domain; the path comes
+  // from the redirect in netlify.toml. There is deliberately no URL override
+  // here -- a ?api= parameter would let anyone hand a crew boss a link that
+  // quietly posts the crew's details somewhere else.
+  var ENDPOINT = 'https://tcr-checklist.netlify.app/submit-checklist';
+
+  // ── The checklist ─────────────────────────────────────────────────────────
+  // Mirrors checklist-items.json at the repo root, which is the canonical copy
+  // the function validates against. Edit one, edit both.
+  var CHECKLIST = [
+    { name: 'Safety', items: [
+      { id: 's1', text: 'Fall protection equipment is in place and inspected' },
+      { id: 's2', text: 'Hard hats, gloves, and eye protection worn by all crew' },
+      { id: 's3', text: 'Ladders are properly placed and secured' },
+      { id: 's4', text: 'All crew members are fit for duty — rested, hydrated, and unimpaired by drugs or alcohol' },
+      { id: 's5', text: 'First aid kit is on site and accessible' },
+      { id: 's6', text: 'Weather checked — no lightning, high wind, or storm risk' }
+    ]},
+    { name: 'Visibility', items: [
+      { id: 'v1', text: 'High-visibility gear worn where required (near roadway/traffic)' },
+      { id: 'v2', text: 'Job site is clearly marked for homeowners and passersby' },
+      { id: 'v3', text: 'Vehicles and equipment are parked safely and visibly' }
+    ]},
+    { name: 'Cleanliness', items: [
+      { id: 'c1', text: 'Work area is clear of debris and trip hazards before starting' },
+      { id: 'c2', text: 'Materials are staged neatly and the site will be kept clean throughout the job' }
+    ]},
+    { name: 'Crew readiness', items: [
+      { id: 'r1', text: 'Crew has water on site and scheduled breaks planned' },
+      { id: 'r2', text: "Crew has been briefed on today's hazards and job scope" },
+      { id: 'r3', text: '[LEGAL PLACEHOLDER — independent contractor acknowledgment / liability language, to be drafted by counsel]', pendingLegalReview: true },
+      { id: 'r4', text: '[LEGAL PLACEHOLDER — OSHA reference / regulatory citation, to be confirmed by counsel]', pendingLegalReview: true }
+    ]}
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('form'), sections = $('sections'), submit = $('submit');
+  var boxes = [];   // the confirmable inputs, in page order
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  CHECKLIST.forEach(function (cat) {
+    var card = document.createElement('section');
+    card.className = 'card';
+
+    var head = document.createElement('div');
+    head.className = 'card-head';
+    var h2 = document.createElement('h2');
+    h2.textContent = cat.name;
+    var rule = document.createElement('div');
+    rule.className = 'rule';
+    head.appendChild(h2); head.appendChild(rule);
+    card.appendChild(head);
+
+    // One list per category, so placeholders and confirmable items keep the
+    // order they are written in rather than being grouped by kind.
+    var ul = document.createElement('ul');
+    ul.className = 'items';
+    card.appendChild(ul);
+
+    cat.items.forEach(function (item) {
+      // A placeholder is not a thing anyone can honestly confirm. It renders as
+      // a visibly unfinished slot rather than a checkbox, so the prototype
+      // never trains a crew boss to tick an empty bracket.
+      if (item.pendingLegalReview) {
+        var phLi = document.createElement('li');
+        phLi.className = 'ph';
+        var ph = document.createElement('div');
+        ph.className = 'pending';
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = 'Pending legal review';
+        var p = document.createElement('p');
+        p.textContent = item.text;
+        ph.appendChild(tag); ph.appendChild(p);
+        phLi.appendChild(ph);
+        ul.appendChild(phLi);
+        return;
+      }
+
+      var li = document.createElement('li');
+      li.id = 'li-' + item.id;
+
+      var label = document.createElement('label');
+      label.className = 'row';
+
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.id = item.id;
+
+      var box = document.createElement('span');
+      box.className = 'box';
+      box.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 L9.5 18 L20 6.5"/></svg>';
+
+      var txt = document.createElement('span');
+      txt.className = 'txt';
+      txt.textContent = item.text;
+
+      label.appendChild(input); label.appendChild(box); label.appendChild(txt);
+      li.appendChild(label);
+      ul.appendChild(li);
+
+      input.addEventListener('change', function () {
+        li.classList.remove('bad');
+        refresh();
+      });
+      boxes.push({ item: item, input: input, li: li, category: cat.name });
+    });
+
+    sections.appendChild(card);
+  });
+
+  // ── Progress ──────────────────────────────────────────────────────────────
+  $('p-all').textContent = String(boxes.length);
+
+  function confirmedCount() {
+    return boxes.filter(function (b) { return b.input.checked; }).length;
+  }
+  function refresh() {
+    var n = confirmedCount(), all = boxes.length;
+    $('p-now').textContent = String(n);
+    $('bar-fill').style.width = (all ? (n / all) * 100 : 0) + '%';
+    $('bar').classList.toggle('done', n === all);
+    var ready = n === all && $('crewBossName').value.trim() && $('jobAddress').value.trim();
+    submit.classList.toggle('idle', !ready);
+
+    // A count from an earlier submit attempt goes stale the moment anything is
+    // ticked. Keep it honest while it is on screen rather than leaving the page
+    // insisting 12 items are missing when none are.
+    var err = $('e-form');
+    if (err.classList.contains('show')) {
+      var left = all - n;
+      if (!left) clearErr(err);
+      else err.textContent = left === 1
+        ? 'One item still needs confirming — it is highlighted above.'
+        : left + ' items still need confirming — they are highlighted above.';
+    }
+  }
+  ['crewBossName', 'jobAddress'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      this.closest('.field').classList.remove('bad');
+      refresh();
+    });
+  });
+  refresh();
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  // Inline and specific. Never an alert, and never a submit button that sits
+  // there greyed out with no explanation of what is missing.
+  function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el) { el.textContent = ''; el.classList.remove('show'); }
+
+  function validate() {
+    var ok = true, first = null;
+    [$('e-name'), $('e-addr'), $('e-form')].forEach(clearErr);
+
+    var name = $('crewBossName').value.trim();
+    if (name.length < 2) {
+      $('f-name').classList.add('bad');
+      showErr($('e-name'), 'Please enter your name.');
+      first = first || $('f-name'); ok = false;
+    }
+    var addr = $('jobAddress').value.trim();
+    if (addr.length < 5) {
+      $('f-addr').classList.add('bad');
+      showErr($('e-addr'), 'Please enter the job address.');
+      first = first || $('f-addr'); ok = false;
+    }
+
+    var missing = boxes.filter(function (b) { return !b.input.checked; });
+    missing.forEach(function (b) { b.li.classList.add('bad'); });
+    if (missing.length) {
+      showErr($('e-form'), missing.length === 1
+        ? 'One item still needs confirming — it is highlighted above.'
+        : missing.length + ' items still need confirming — they are highlighted above.');
+      first = first || missing[0].li; ok = false;
+    }
+
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return ok;
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    var name = $('crewBossName').value.trim();
+    var addr = $('jobAddress').value.trim();
+    var submittedAt = new Date().toISOString();
+
+    var items = [];
+    CHECKLIST.forEach(function (cat) {
+      cat.items.forEach(function (item) {
+        var b = boxes.filter(function (x) { return x.item.id === item.id; })[0];
+        var rec = {
+          id: item.id,
+          category: cat.name,
+          text: item.text,
+          confirmed: b ? b.input.checked : false
+        };
+        if (item.pendingLegalReview) rec.pendingLegalReview = true;
+        items.push(rec);
+      });
+    });
+
+    var payload = {
+      crewBossName: name,
+      jobAddress: addr,
+      submittedAt: submittedAt,
+      items: items,
+      allConfirmed: confirmedCount() === boxes.length,
+      prototype: true
+    };
+
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('status ' + res.status);
+      return res.json().catch(function () { return {}; });
+    }).then(function () {
+      form.classList.add('hide');
+      $('intro').classList.add('hide');
+      $('actionbar').classList.add('hide');
+      document.body.style.paddingBottom = '0';
+      $('d-name').textContent = name;
+      $('d-addr').textContent = addr;
+      $('d-time').textContent = new Date(submittedAt).toLocaleString();
+      $('done').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }).catch(function () {
+      // If the record cannot be filed, say so plainly and give a way forward.
+      // A crew boss standing on a roof needs to know whether to start the job,
+      // not to read "something went wrong".
+      showErr($('e-form'),
+        'We could not file that just now — check your signal and try again. ' +
+        'If it keeps failing, call the office and start the job; this is a record, not a gate.');
+      submit.disabled = false;
+      submit.textContent = 'Submit checklist';
+    });
+  });
+})();
+</script>
+</body>
+</html>

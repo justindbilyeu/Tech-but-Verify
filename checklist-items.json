@@ -1,0 +1,41 @@
+{
+  "version": "0.1.0-prototype",
+  "note": "Canonical checklist definition. The Netlify function validates every submission against this file, and docs/index.html mirrors it (see the CHECKLIST array there). If you edit one, edit both -- a mismatch makes the server reject submissions with 'unrecognised checklist item' rather than silently recording bad data. Items marked pendingLegalReview are placeholders awaiting counsel and are NOT presented as confirmable.",
+  "categories": [
+    {
+      "name": "Safety",
+      "items": [
+        { "id": "s1", "text": "Fall protection equipment is in place and inspected" },
+        { "id": "s2", "text": "Hard hats, gloves, and eye protection worn by all crew" },
+        { "id": "s3", "text": "Ladders are properly placed and secured" },
+        { "id": "s4", "text": "All crew members are fit for duty — rested, hydrated, and unimpaired by drugs or alcohol" },
+        { "id": "s5", "text": "First aid kit is on site and accessible" },
+        { "id": "s6", "text": "Weather checked — no lightning, high wind, or storm risk" }
+      ]
+    },
+    {
+      "name": "Visibility",
+      "items": [
+        { "id": "v1", "text": "High-visibility gear worn where required (near roadway/traffic)" },
+        { "id": "v2", "text": "Job site is clearly marked for homeowners and passersby" },
+        { "id": "v3", "text": "Vehicles and equipment are parked safely and visibly" }
+      ]
+    },
+    {
+      "name": "Cleanliness",
+      "items": [
+        { "id": "c1", "text": "Work area is clear of debris and trip hazards before starting" },
+        { "id": "c2", "text": "Materials are staged neatly and the site will be kept clean throughout the job" }
+      ]
+    },
+    {
+      "name": "Crew readiness",
+      "items": [
+        { "id": "r1", "text": "Crew has water on site and scheduled breaks planned" },
+        { "id": "r2", "text": "Crew has been briefed on today's hazards and job scope" },
+        { "id": "r3", "text": "[LEGAL PLACEHOLDER — independent contractor acknowledgment / liability language, to be drafted by counsel]", "pendingLegalReview": true },
+        { "id": "r4", "text": "[LEGAL PLACEHOLDER — OSHA reference / regulatory citation, to be confirmed by counsel]", "pendingLegalReview": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Checklist History · Texas Choice Roofing</title>
+<meta name="theme-color" content="#161515">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#BA1313;
+  --red-dark:#8E0F0F;
+  --red-wash:#fbeded;
+  --black:#161515;
+  --ink:#221f1f;
+  --ink-soft:#4b4646;
+  --muted:#736d6d;
+  --line:#e3ddd8;
+  --line-soft:#efeae6;
+  --paper:#f4f2ef;
+  --card:#ffffff;
+  --amber:#8a5a00;
+  --amber-wash:#fdf7e8;
+  --amber-line:#e8d5a3;
+  --good:#15803d;
+  --good-wash:#eaf6ee;
+  --f-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --f-body:'Spline Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --shadow:0 1px 2px rgba(22,21,21,.05),0 6px 20px rgba(22,21,21,.06);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink);
+  line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.masthead{background:var(--black);padding:22px 20px 18px;text-align:center;
+  border-bottom:4px solid var(--red)}
+.masthead img{display:block;margin:0 auto;max-width:180px;width:100%;height:auto}
+.wordmark{display:inline-block;text-align:center;line-height:1}
+.wordmark .roofline{display:block;margin:0 auto 7px;width:62px;height:17px}
+.wordmark .l1{font-family:var(--f-display);font-weight:600;font-size:1.2rem;color:#fff;
+  letter-spacing:.02em;display:block}
+.wordmark .l2{font-family:var(--f-body);font-weight:700;font-size:.63rem;letter-spacing:.42em;
+  text-transform:uppercase;color:var(--red);display:block;margin-top:5px;padding-left:.42em}
+.eyebrow{margin:14px 0 0;font-size:.68rem;font-weight:600;letter-spacing:.24em;
+  text-transform:uppercase;color:#b9b2b2}
+
+.wrap{max-width:1000px;margin:0 auto;padding:18px 14px 40px}
+
+.proto{background:var(--amber-wash);border:1px solid var(--amber-line);
+  border-left:4px solid var(--amber);border-radius:10px;padding:13px 15px;
+  margin-bottom:16px;font-size:.85rem;color:#5c3d00}
+.proto b{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:5px}
+
+.topline{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+  gap:12px;margin-bottom:16px}
+.topline h1{font-family:var(--f-display);font-weight:600;
+  font-size:clamp(1.3rem,4.6vw,1.7rem);margin:0;color:var(--black);letter-spacing:-.01em}
+.topline .sub{font-size:.85rem;color:var(--muted);margin:4px 0 0}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:11px 15px;box-shadow:var(--shadow);min-width:104px}
+.stat .n{font-family:var(--f-display);font-weight:600;font-size:1.5rem;
+  color:var(--black);line-height:1.1}
+.stat .k{font-size:.66rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin-top:3px}
+
+.tools{margin-bottom:14px}
+.tools input{width:100%;max-width:340px;font:inherit;font-size:.94rem;padding:11px 13px;
+  border:1.5px solid var(--line);border-radius:9px;background:#fdfcfb;color:var(--ink)}
+.tools input:focus{outline:none;border-color:var(--red);background:#fff;
+  box-shadow:0 0 0 3px var(--red-wash)}
+
+/* ── Rows ────────────────────────────────────────────────────────────────── */
+.board{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden}
+.hrow,.srow{display:grid;grid-template-columns:170px 1fr 1.4fr 120px 84px;
+  gap:14px;align-items:center;padding:13px 18px}
+.hrow{background:#faf8f6;border-bottom:1px solid var(--line);
+  font-size:.66rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted)}
+.srow{border-top:1px solid var(--line-soft);font-size:.92rem}
+.srow:first-child{border-top:none}
+.srow .who{font-weight:600}
+.srow .addr{color:var(--ink-soft)}
+.srow .when{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:4px 10px;
+  border-radius:999px;white-space:nowrap}
+.pill.yes{background:var(--good-wash);color:var(--good)}
+.pill.no{background:var(--red-wash);color:var(--red)}
+.srow a.raw{font-size:.8rem;font-weight:600;color:var(--red);text-decoration:none;
+  white-space:nowrap}
+.srow a.raw:hover{text-decoration:underline}
+
+.note{padding:15px 18px;font-size:.88rem;color:var(--muted);text-align:center}
+.note.bad{color:var(--red)}
+.note code{background:#f4f2ef;padding:1px 5px;border-radius:4px;font-size:.85em}
+
+@media (max-width:760px){
+  .hrow{display:none}
+  .srow{grid-template-columns:1fr auto;gap:5px 12px;padding:15px 16px;
+    grid-template-areas:"who conf" "addr addr" "when raw"}
+  .srow .who{grid-area:who;font-size:1rem}
+  .srow .conf{grid-area:conf;justify-self:end}
+  .srow .addr{grid-area:addr}
+  .srow .when{grid-area:when}
+  .srow .rawcell{grid-area:raw;justify-self:end}
+}
+
+footer{max-width:1000px;margin:0 auto;padding:2px 18px 30px;font-size:.78rem;
+  color:var(--muted);text-align:center}
+footer a{color:var(--muted)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <img id="logo" src="assets/tcr_logo.png" alt="Texas Choice Roofing"
+       onerror="this.remove();document.getElementById('wordmark').classList.remove('hide')">
+  <span class="wordmark hide" id="wordmark" role="img" aria-label="Texas Choice Roofing">
+    <svg class="roofline" viewBox="0 0 74 20" aria-hidden="true">
+      <path d="M4 17 L37 3 L70 17" fill="none" stroke="#BA1313" stroke-width="4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="l1">Texas Choice</span>
+    <span class="l2">Roofing</span>
+  </span>
+  <p class="eyebrow">Checklist history</p>
+</header>
+
+<div class="wrap">
+
+  <div class="proto">
+    <b>Prototype — not legally reviewed</b>
+    These are test records. The checklist language and the independent-contractor
+    framing have not been reviewed by counsel. Note also that this dashboard reads
+    submissions without authentication, which only works while the repository is
+    public — meaning crew boss names and job addresses are publicly readable.
+    See the README before putting real jobs through it.
+  </div>
+
+  <div class="topline">
+    <div>
+      <h1>Pre-job checklists</h1>
+      <p class="sub">Newest first, straight from <span id="repoName"></span>.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="tools">
+    <label for="q" class="hide">Filter</label>
+    <input type="search" id="q" placeholder="Filter by crew boss or address…" autocomplete="off">
+  </div>
+
+  <div class="board">
+    <div class="hrow">
+      <span>Submitted</span><span>Crew boss</span><span>Job address</span>
+      <span>Confirmed</span><span>Record</span>
+    </div>
+    <div id="rows"></div>
+    <div class="note" id="note">Loading…</div>
+  </div>
+
+</div>
+
+<footer>
+  Texas Choice Roofing · internal prototype ·
+  <a href="index.html">open the checklist</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // The repo the records live in. Public reads need no token; if this repo is
+  // ever made private, these fetches start returning 404 and the dashboard
+  // needs an authenticated backend instead. That tradeoff is in the README.
+  var REPO = 'justindbilyeu/Tech-but-Verify';
+  var DIR = 'data/submissions';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var rows = $('rows'), note = $('note');
+  var all = [];
+
+  $('repoName').textContent = REPO;
+
+  function say(msg, bad) {
+    note.textContent = msg;
+    note.className = 'note' + (bad ? ' bad' : '');
+    note.classList.remove('hide');
+  }
+
+  function fmt(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso || '—';
+    return d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    });
+  }
+
+  // Every field below was typed by whoever filled in the form. It goes in with
+  // textContent, never innerHTML -- a crew boss named "<img onerror=...>" should
+  // be an odd row in a table, not script running on the office's dashboard.
+  function render(list) {
+    rows.textContent = '';
+    if (!list.length) {
+      say(all.length ? 'No records match that filter.' : 'No checklists submitted yet.');
+      return;
+    }
+    note.classList.add('hide');
+
+    list.forEach(function (s) {
+      var row = document.createElement('div');
+      row.className = 'srow';
+
+      var when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = fmt(s.submittedAt);
+
+      var who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = s.crewBossName || '—';
+
+      var addr = document.createElement('span');
+      addr.className = 'addr';
+      addr.textContent = s.jobAddress || '—';
+
+      var conf = document.createElement('span');
+      conf.className = 'conf';
+      var items = Array.isArray(s.items) ? s.items : [];
+      var live = items.filter(function (i) { return !i.pendingLegalReview; });
+      var yes = live.filter(function (i) { return i.confirmed === true; }).length;
+      var pill = document.createElement('span');
+      pill.className = 'pill ' + (live.length && yes === live.length ? 'yes' : 'no');
+      pill.textContent = live.length ? yes + ' of ' + live.length : 'no items';
+      conf.appendChild(pill);
+
+      var rawCell = document.createElement('span');
+      rawCell.className = 'rawcell';
+      var a = document.createElement('a');
+      a.className = 'raw';
+      a.href = s.__url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = 'JSON';
+      rawCell.appendChild(a);
+
+      [when, who, addr, conf, rawCell].forEach(function (c) { row.appendChild(c); });
+      rows.appendChild(row);
+    });
+  }
+
+  function stats() {
+    var today = new Date().toDateString();
+    var n = all.length;
+    var t = all.filter(function (s) {
+      var d = new Date(s.submittedAt);
+      return !isNaN(d) && d.toDateString() === today;
+    }).length;
+    var full = all.filter(function (s) { return s.allConfirmed === true; }).length;
+    var box = $('stats');
+    box.textContent = '';
+    [[n, 'Total'], [t, 'Today'], [full, 'Fully confirmed']].forEach(function (pair) {
+      var el = document.createElement('div');
+      el.className = 'stat';
+      var num = document.createElement('div');
+      num.className = 'n';
+      num.textContent = String(pair[0]);
+      var k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = pair[1];
+      el.appendChild(num); el.appendChild(k);
+      box.appendChild(el);
+    });
+  }
+
+  $('q').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (!q) return render(all);
+    render(all.filter(function (s) {
+      return ((s.crewBossName || '') + ' ' + (s.jobAddress || '')).toLowerCase().indexOf(q) !== -1;
+    }));
+  });
+
+  // One API call to list the directory, then the files themselves off the raw
+  // CDN. Reading each record through the API instead would spend one of the
+  // sixty unauthenticated calls an office IP gets per hour on every row.
+  fetch('https://api.github.com/repos/' + REPO + '/contents/' + DIR)
+    .then(function (res) {
+      if (res.status === 404) {
+        say('No submissions directory yet — it appears with the first submission. ' +
+            '(If this repo was made private, public reads return 404 and this ' +
+            'dashboard needs an authenticated backend.)');
+        return null;
+      }
+      if (res.status === 403) {
+        say('GitHub rate-limited this browser (60 requests an hour for anonymous ' +
+            'reads). Wait a few minutes and reload.', true);
+        return null;
+      }
+      if (!res.ok) throw new Error('status ' + res.status);
+      return res.json();
+    })
+    .then(function (listing) {
+      if (!listing) return;
+      var files = (Array.isArray(listing) ? listing : [])
+        .filter(function (f) { return f.type === 'file' && /\.json$/.test(f.name); })
+        // Names begin with an ISO timestamp, so a reverse name sort is a
+        // reverse time sort and needs no file reads to establish order.
+        .sort(function (a, b) { return a.name < b.name ? 1 : a.name > b.name ? -1 : 0; });
+
+      if (!files.length) { say('No checklists submitted yet.'); return; }
+      say('Loading ' + files.length + ' record' + (files.length === 1 ? '' : 's') + '…');
+
+      return Promise.all(files.map(function (f) {
+        return fetch(f.download_url)
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (rec) {
+            if (!rec) return null;
+            rec.__url = f.html_url || f.download_url;
+            rec.__name = f.name;
+            return rec;
+          })
+          .catch(function () { return null; });
+      })).then(function (recs) {
+        all = recs.filter(Boolean);
+        if (!all.length) { say('Found records but could not read them.', true); return; }
+        stats();
+        render(all);
+      });
+    })
+    .catch(function () {
+      say('Could not reach GitHub to load the records. Check the connection and reload.', true);
+    });
+})();
+</script>
+</body>
+</html>

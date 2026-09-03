@@ -1,0 +1,182 @@
+'use strict';
+process.env.GITHUB_TOKEN = 'ghp_faketoken';
+process.env.GITHUB_REPO = 'justindbilyeu/Tech-but-Verify';
+
+// Exercises the function against a mocked GitHub API. No network, no token.
+//
+//   node tools/test-submit-checklist.js
+
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
+const CANON = require(path.join(ROOT, 'checklist-items.json'));
+const fn = require(path.join(ROOT, 'netlify/functions/submit-checklist.js'));
+
+// ── mock GitHub ─────────────────────────────────────────────────────────────
+let calls = [];
+let nextStatus = [201];
+global.fetch = async (url, opts) => {
+  calls.push({ url, body: JSON.parse(opts.body), headers: opts.headers, method: opts.method });
+  const st = nextStatus.length > 1 ? nextStatus.shift() : nextStatus[0];
+  return { ok: st >= 200 && st < 300, status: st, text: async () => '{"content":{}}' };
+};
+
+const ORIGIN = 'https://justindbilyeu.github.io';
+
+function goodItems(over = {}) {
+  return CANON.categories.flatMap((c) =>
+    c.items.map((i) => {
+      const rec = {
+        id: i.id, category: c.name, text: i.text,
+        confirmed: i.pendingLegalReview ? false : true
+      };
+      if (i.pendingLegalReview) rec.pendingLegalReview = true;
+      if (over[i.id]) Object.assign(rec, over[i.id]);
+      return rec;
+    }));
+}
+function payload(o = {}) {
+  return Object.assign({
+    crewBossName: 'John Smith',
+    jobAddress: '1204 Oak Hollow Dr, Houston, TX 77008',
+    submittedAt: new Date().toISOString(),
+    items: goodItems(o.__items || {}),
+    allConfirmed: true,
+    prototype: true
+  }, o);
+}
+function ev(body, o = {}) {
+  return Object.assign({
+    httpMethod: 'POST',
+    headers: { origin: ORIGIN },
+    body: typeof body === 'string' ? body : JSON.stringify(body)
+  }, o);
+}
+
+let pass = 0, fail = 0;
+function check(label, cond, extra) {
+  if (cond) { pass++; console.log('  ok   ' + label); }
+  else { fail++; console.log('  FAIL ' + label + (extra ? '  -> ' + extra : '')); }
+}
+
+(async () => {
+  console.log('\n1. happy path');
+  calls = []; nextStatus = [201];
+  let r = await fn.handler(ev(payload()));
+  let b = JSON.parse(r.body);
+  check('200', r.statusCode === 200, r.statusCode + ' ' + r.body);
+  check('CORS echoes allowed origin', r.headers['Access-Control-Allow-Origin'] === ORIGIN);
+  check('one GitHub call', calls.length === 1);
+  check('path shape', /^data\/submissions\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_john-smith\.json$/.test(b.path), b.path);
+  check('PUT to contents endpoint',
+    calls[0].url === 'https://api.github.com/repos/justindbilyeu/Tech-but-Verify/contents/' + b.path, calls[0].url);
+  check('bearer token sent', calls[0].headers.Authorization === 'Bearer ghp_faketoken');
+  const rec = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('15 items recorded', rec.items.length === 15, rec.items.length);
+  check('allConfirmed true', rec.allConfirmed === true);
+  check('placeholders not confirmed',
+    rec.items.filter(i => i.pendingLegalReview).every(i => i.confirmed === false));
+  check('legalReviewPending flag', rec.legalReviewPending === true);
+  check('checklistVersion recorded', rec.checklistVersion === CANON.version, rec.checklistVersion);
+  check('commit message names crew boss', /John Smith/.test(calls[0].body.message), calls[0].body.message);
+  check('record is valid JSON w/ trailing newline',
+    Buffer.from(calls[0].body.content, 'base64').toString('utf8').endsWith('\n'));
+
+  console.log('\n2. rejections');
+  calls = [];
+  r = await fn.handler(ev(payload({ __items: { s3: { confirmed: false } } })));
+  check('unconfirmed item -> 400', r.statusCode === 400, r.body);
+  check('names the item', /s3/.test(r.body), r.body);
+
+  r = await fn.handler(ev(payload({ __items: { r3: { confirmed: true } } })));
+  check('confirmed placeholder -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev(payload({ __items: { s1: { text: 'I promise nothing' } } })));
+  check('tampered item text -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev(payload({ crewBossName: 'J' })));
+  check('short name -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev(payload({ jobAddress: 'x' })));
+  check('short address -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev({ crewBossName: 'John Smith', jobAddress: '1204 Oak Hollow Dr', items: [] }));
+  check('empty items -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev('{not json'));
+  check('bad JSON -> 400', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev(payload(), { headers: { origin: 'https://evil.example' } }));
+  check('foreign origin -> 403', r.statusCode === 403, r.body);
+  check('no ACAO for foreign origin', !r.headers['Access-Control-Allow-Origin']);
+
+  r = await fn.handler(ev(payload(), { httpMethod: 'GET' }));
+  check('GET -> 405', r.statusCode === 405, r.body);
+
+  r = await fn.handler(ev(payload(), { httpMethod: 'OPTIONS' }));
+  check('OPTIONS -> 204', r.statusCode === 204, r.body);
+
+  r = await fn.handler(ev('x'.repeat(40000)));
+  check('oversize body -> 413', r.statusCode === 413, r.body);
+  check('nothing written on any rejection', calls.length === 0, calls.length);
+
+  console.log('\n3. typography tolerance');
+  calls = []; nextStatus = [201];
+  const curly = payload();
+  const r2 = curly.items.find(i => i.id === 'r2');
+  r2.text = r2.text.replace("'", '’');           // curly apostrophe
+  const s4 = curly.items.find(i => i.id === 's4');
+  s4.text = s4.text.replace('—', '–') + ' ';  // en dash + trailing space
+  r = await fn.handler(ev(curly));
+  check('curly quotes / dash variants accepted -> 200', r.statusCode === 200, r.body);
+  const rec2 = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('canonical text stored, not client copy',
+    rec2.items.find(i => i.id === 'r2').text === CANON.categories.flatMap(c => c.items).find(i => i.id === 'r2').text);
+
+  console.log('\n4. path safety');
+  const cases = [
+    ['../../../../etc/passwd', 'etc-passwd'],
+    ['..', 'unnamed'],
+    ['a/b\\c', 'a-b-c'],
+    ['O’Brien-Smíth', 'o-brien-smith'],
+    ['<script>x</script>', 'script-x-script'],
+    ['   ', 'unnamed'],
+    ['中文名字', 'unnamed']
+  ];
+  for (const [inp, want] of cases) {
+    const got = fn._internal.slug(inp);
+    check('slug(' + JSON.stringify(inp) + ') = ' + JSON.stringify(got), got === want, 'wanted ' + want);
+  }
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload({ crewBossName: '../../../../etc/passwd' })));
+  check('traversal name still writes inside data/submissions',
+    r.statusCode === 200 && /^data\/submissions\/[^/]+\.json$/.test(JSON.parse(r.body).path),
+    r.body);
+
+  console.log('\n5. collision retry');
+  calls = []; nextStatus = [422, 201];
+  r = await fn.handler(ev(payload()));
+  check('retries once on 422 and succeeds', r.statusCode === 200 && calls.length === 2,
+    r.statusCode + ' calls=' + calls.length);
+  check('retry used a different path', calls[0].url !== calls[1].url);
+
+  console.log('\n6. failure handling');
+  calls = []; nextStatus = [401];
+  r = await fn.handler(ev(payload()));
+  check('GitHub 401 -> 502', r.statusCode === 502, r.body);
+  check('no token or GitHub detail leaked to client',
+    !/ghp_|scope|Tech-but-Verify/.test(r.body), r.body);
+
+  console.log('\n7. unconfigured server');
+  const savedT = process.env.GITHUB_TOKEN;
+  delete process.env.GITHUB_TOKEN;
+  r = await fn.handler(ev(payload()));
+  check('missing GITHUB_TOKEN -> 500', r.statusCode === 500, r.body);
+  process.env.GITHUB_TOKEN = savedT;
+  process.env.GITHUB_REPO = 'not-a-repo';
+  r = await fn.handler(ev(payload()));
+  check('malformed GITHUB_REPO -> 500', r.statusCode === 500, r.body);
+  process.env.GITHUB_REPO = 'justindbilyeu/Tech-but-Verify';
+
+  console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
+  process.exit(fail ? 1 : 0);
+})();

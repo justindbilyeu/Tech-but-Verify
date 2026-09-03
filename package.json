@@ -1,0 +1,13 @@
+{
+  "name": "tcr-crew-boss-checklist",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre-job crew boss checklist for Texas Choice Roofing (prototype, pending legal review)",
+  "scripts": {
+    "test": "node tools/verify-checklist-sync.js && node tools/test-submit-checklist.js",
+    "test:pages": "node tools/test-pages.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
