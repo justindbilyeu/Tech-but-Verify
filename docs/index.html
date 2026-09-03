@@ -311,6 +311,13 @@ footer a{color:var(--muted)}
                  enterkeyhint="done" maxlength="200" required>
           <p class="err" id="e-addr"></p>
         </div>
+        <!-- Unhidden only when PIN_REQUIRED is on. -->
+        <div class="field hide" id="f-pin">
+          <label for="crewPin">Your crew boss PIN</label>
+          <input type="text" id="crewPin" name="pin" inputmode="numeric" pattern="[0-9]*"
+                 autocomplete="off" enterkeyhint="done" maxlength="12">
+          <p class="err" id="e-pin"></p>
+        </div>
       </div>
     </section>
 
@@ -358,12 +365,20 @@ footer a{color:var(--muted)}
   'use strict';
 
   // ── Where submissions go ───────────────────────────────────────────────────
-  // The Netlify function in /netlify/functions/submit-checklist.js. Set this to
-  // your deployed site once `netlify deploy` gives you a domain; the path comes
-  // from the redirect in netlify.toml. There is deliberately no URL override
-  // here -- a ?api= parameter would let anyone hand a crew boss a link that
-  // quietly posts the crew's details somewhere else.
-  var ENDPOINT = 'https://tcr-checklist.netlify.app/submit-checklist';
+  // The function runs on the existing juiceworks-api Netlify site, alongside
+  // CarrierCalc's /lead endpoint. There is deliberately no ?api= URL override
+  // here -- that would let anyone hand a crew boss a link that quietly posts
+  // the crew's details somewhere else.
+  var ENDPOINT = 'https://juiceworks-api.netlify.app/submit-checklist';
+
+  // Per-crew-boss PINs. Off while this is a demo, because there is no roster
+  // yet and a required PIN would just block the thing you are showing people.
+  //
+  // To turn it on, do both together: set CREW_PINS on the juiceworks-api site
+  // (a JSON map of PIN to name -- never in this repo, it is public) and flip
+  // this to true. The server enforces independently, so on-here-only adds a box
+  // nobody checks, and on-there-only rejects every submission with a 401.
+  var PIN_REQUIRED = false;
 
   // ── The checklist ─────────────────────────────────────────────────────────
   // Mirrors checklist-items.json at the repo root, which is the canonical copy
@@ -511,7 +526,9 @@ footer a{color:var(--muted)}
     document.fonts.ready.then(padForActionBar).catch(function () {});
   }
 
-  ['crewBossName', 'jobAddress'].forEach(function (id) {
+  if (PIN_REQUIRED) $('f-pin').classList.remove('hide');
+
+  ['crewBossName', 'jobAddress', 'crewPin'].forEach(function (id) {
     $(id).addEventListener('input', function () {
       this.closest('.field').classList.remove('bad');
       refresh();
@@ -527,7 +544,7 @@ footer a{color:var(--muted)}
 
   function validate() {
     var ok = true, first = null;
-    [$('e-name'), $('e-addr'), $('e-form')].forEach(clearErr);
+    [$('e-name'), $('e-addr'), $('e-pin'), $('e-form')].forEach(clearErr);
 
     var name = $('crewBossName').value.trim();
     if (name.length < 2) {
@@ -540,6 +557,15 @@ footer a{color:var(--muted)}
       $('f-addr').classList.add('bad');
       showErr($('e-addr'), 'Please enter the job address.');
       first = first || $('f-addr'); ok = false;
+    }
+
+    if (PIN_REQUIRED) {
+      var pin = $('crewPin').value.trim();
+      if (!/^[0-9]{4,12}$/.test(pin)) {
+        $('f-pin').classList.add('bad');
+        showErr($('e-pin'), 'Please enter your PIN.');
+        first = first || $('f-pin'); ok = false;
+      }
     }
 
     var missing = boxes.filter(function (b) { return !b.input.checked; });
@@ -587,6 +613,7 @@ footer a{color:var(--muted)}
       allConfirmed: confirmedCount() === boxes.length,
       prototype: true
     };
+    if (PIN_REQUIRED) payload.pin = $('crewPin').value.trim();
 
     submit.disabled = true;
     submit.textContent = 'Sending…';
@@ -596,8 +623,17 @@ footer a{color:var(--muted)}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(function (res) {
-      if (!res.ok) throw new Error('status ' + res.status);
-      return res.json().catch(function () { return {}; });
+      // Read the body either way: a rejection carries the reason, and "check
+      // your signal" is the wrong thing to tell someone who mistyped a PIN.
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok) {
+          var e = new Error('http ' + res.status);
+          e.status = res.status;
+          e.serverMessage = body && typeof body.error === 'string' ? body.error : '';
+          throw e;
+        }
+        return body;
+      });
     }).then(function () {
       form.classList.add('hide');
       $('intro').classList.add('hide');
@@ -609,13 +645,23 @@ footer a{color:var(--muted)}
       $('d-time').textContent = new Date(submittedAt).toLocaleString();
       $('done').classList.add('show');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }).catch(function () {
-      // If the record cannot be filed, say so plainly and give a way forward.
-      // A crew boss standing on a roof needs to know whether to start the job,
-      // not to read "something went wrong".
-      showErr($('e-form'),
-        'We could not file that just now — check your signal and try again. ' +
-        'If it keeps failing, call the office and start the job; this is a record, not a gate.');
+    }).catch(function (err) {
+      // A rejected PIN is the crew boss's to fix, and it belongs on the PIN
+      // field rather than in a generic banner at the bottom.
+      if (err && err.status === 401) {
+        $('f-pin').classList.remove('hide');
+        $('f-pin').classList.add('bad');
+        showErr($('e-pin'), err.serverMessage ||
+          'That PIN was not recognised. Check it and try again, or call the office.');
+        $('f-pin').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        // If the record cannot be filed, say so plainly and give a way forward.
+        // A crew boss standing on a roof needs to know whether to start the job,
+        // not to read "something went wrong".
+        showErr($('e-form'),
+          'We could not file that just now — check your signal and try again. ' +
+          'If it keeps failing, call the office and start the job; this is a record, not a gate.');
+      }
       submit.disabled = false;
       submit.textContent = 'Submit checklist';
     });

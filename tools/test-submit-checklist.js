@@ -166,6 +166,59 @@ function check(label, cond, extra) {
   check('no token or GitHub detail leaked to client',
     !/ghp_|scope|Tech-but-Verify/.test(r.body), r.body);
 
+  console.log('\n7b. crew boss PINs');
+  const PINS = { '481027': 'John Smith', '730914': 'Ana Reyes' };
+  process.env.CREW_PINS = JSON.stringify(PINS);
+
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload({ pin: '481027' })));
+  check('valid PIN -> 200', r.statusCode === 200, r.body);
+  let recP = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('record marked identityVerified', recP.identityVerified === true);
+  check('PIN itself is never written to the public record',
+    !JSON.stringify(recP).includes('481027'), JSON.stringify(recP).slice(0, 200));
+
+  calls = [];
+  r = await fn.handler(ev(payload({ pin: '000000' })));
+  check('unknown PIN -> 401', r.statusCode === 401, r.body);
+  check('nothing written for an unknown PIN', calls.length === 0);
+  r = await fn.handler(ev(payload()));
+  check('missing PIN once configured -> 401', r.statusCode === 401, r.body);
+  r = await fn.handler(ev(payload({ pin: 'constructor' })));
+  check('prototype-chain key is not a valid PIN', r.statusCode === 401, r.body);
+  r = await fn.handler(ev(payload({ pin: '__proto__' })));
+  check('__proto__ is not a valid PIN', r.statusCode === 401, r.body);
+  r = await fn.handler(ev(payload({ pin: 481027 })));
+  check('numeric (non-string) PIN -> 401', r.statusCode === 401, r.body);
+
+  // The roster decides who this is, not the name typed into the box.
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload({ pin: '730914', crewBossName: 'Somebody Else' })));
+  check('typed name cannot override the roster -> 200', r.statusCode === 200, r.body);
+  recP = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('record uses the roster name', recP.crewBossName === 'Ana Reyes', recP.crewBossName);
+  check('the mismatched typed name is kept for the audit trail',
+    recP.typedName === 'Somebody Else', recP.typedName);
+  check('filename uses the roster name',
+    /_ana-reyes\.json$/.test(JSON.parse(r.body).path), JSON.parse(r.body).path);
+
+  // A typo in the Netlify UI must not silently reopen the checklist.
+  for (const bad of ['{not json', '[]', '{}', '{"1234":""}', '{"1234":5}', 'null']) {
+    process.env.CREW_PINS = bad;
+    calls = [];
+    r = await fn.handler(ev(payload({ pin: '481027' })));
+    check('malformed CREW_PINS ' + JSON.stringify(bad) + ' fails closed (500)',
+      r.statusCode === 500 && calls.length === 0, r.statusCode + ' calls=' + calls.length);
+  }
+
+  process.env.CREW_PINS = '   ';
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  check('blank CREW_PINS means PINs are simply off', r.statusCode === 200, r.body);
+  recP = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('identityVerified false when PINs are off', recP.identityVerified === false);
+  delete process.env.CREW_PINS;
+
   console.log('\n7. unconfigured server');
   const savedT = process.env.GITHUB_TOKEN;
   delete process.env.GITHUB_TOKEN;

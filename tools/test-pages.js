@@ -48,7 +48,7 @@ const check = (label, cond, extra) => {
   await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
 
   let posted = null;
-  await page.route('https://tcr-checklist.netlify.app/**', async (route) => {
+  await page.route('https://juiceworks-api.netlify.app/**', async (route) => {
     posted = JSON.parse(route.request().postData());
     await route.fulfill({
       status: 200, contentType: 'application/json',
@@ -228,7 +228,7 @@ const check = (label, cond, extra) => {
   await p2.route('https://fonts.g**/**', (r) => r.abort());
   let popped = false;
   p2.on('dialog', async (d) => { popped = true; await d.dismiss(); });
-  await p2.route('https://tcr-checklist.netlify.app/**', (r) =>
+  await p2.route('https://juiceworks-api.netlify.app/**', (r) =>
     r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
   await p2.goto('file://' + path.join(DOCS, 'index.html'));
   await p2.fill('#crewBossName', '<img src=x onerror=alert(1)>');
@@ -241,6 +241,75 @@ const check = (label, cond, extra) => {
     (await p2.locator('#d-name').textContent()) === '<img src=x onerror=alert(1)>');
   check('no injected img element', await p2.locator('#d-name img').count() === 0);
   await p2.close();
+
+  // ── PIN mode ─────────────────────────────────────────────────────────────
+  // The page ships with PIN_REQUIRED off, so exercise the on state against a
+  // temporary copy alongside index.html (so its relative asset paths still
+  // resolve). It is removed again in the finally below.
+  console.log('\n7a. crew boss PIN mode');
+  const pinPage = path.join(DOCS, '.pin-mode-test.html');
+  fs.writeFileSync(pinPage, fs.readFileSync(path.join(DOCS, 'index.html'), 'utf8')
+    .replace('var PIN_REQUIRED = false;', 'var PIN_REQUIRED = true;'));
+  try {
+    const pp = await ctx.newPage();
+    await pp.setViewportSize({ width: 390, height: 844 });
+    await pp.route('https://fonts.g**/**', (r) => r.abort());
+    let sent = null, replyWith = { status: 401, body: { error: 'That PIN was not recognised. Check it and try again, or call the office.' } };
+    await pp.route('https://juiceworks-api.netlify.app/**', async (route) => {
+      sent = JSON.parse(route.request().postData());
+      await route.fulfill({ status: replyWith.status, contentType: 'application/json',
+        body: JSON.stringify(replyWith.body) });
+    });
+    await pp.goto('file://' + pinPage);
+    await pp.waitForTimeout(200);
+
+    check('PIN field visible when required', await pp.locator('#f-pin').isVisible());
+    check('PIN input asks for a numeric keypad',
+      await pp.locator('#crewPin').getAttribute('inputmode') === 'numeric');
+    check('PIN field is off autocomplete',
+      await pp.locator('#crewPin').getAttribute('autocomplete') === 'off');
+
+    await pp.fill('#crewBossName', 'John Smith');
+    await pp.fill('#jobAddress', '1204 Oak Hollow Dr, Houston, TX 77008');
+    for (let i = 0; i < 13; i++) await pp.locator('.row').nth(i).click();
+    await pp.locator('#submit').click();
+    await pp.waitForTimeout(300);
+    check('missing PIN blocks the submit client-side', sent === null);
+    check('inline PIN error shown', await pp.locator('#e-pin').isVisible());
+
+    await pp.fill('#crewPin', '12');
+    await pp.locator('#submit').click();
+    await pp.waitForTimeout(300);
+    check('too-short PIN still blocked', sent === null);
+
+    await pp.fill('#crewPin', '481027');
+    await pp.locator('#submit').click();
+    await pp.waitForTimeout(400);
+    check('valid-looking PIN is sent', sent !== null && sent.pin === '481027',
+      sent && sent.pin);
+    check('a 401 shows the server reason on the PIN field, not "check your signal"',
+      /not recognised/.test(await pp.locator('#e-pin').textContent()),
+      await pp.locator('#e-pin').textContent());
+    check('the generic network banner stays hidden on a 401',
+      !(await pp.locator('#e-form').isVisible()));
+    check('submit re-enabled after a rejected PIN',
+      !(await pp.locator('#submit').isDisabled()));
+
+    replyWith = { status: 200, body: { ok: true } };
+    await pp.locator('#submit').click();
+    await pp.waitForTimeout(400);
+    check('retrying after a good PIN succeeds', await pp.locator('#done').isVisible());
+    await pp.close();
+  } finally {
+    fs.unlinkSync(pinPage);
+  }
+
+  // The shipped page must stay open for the demo.
+  const shipped = fs.readFileSync(path.join(DOCS, 'index.html'), 'utf8');
+  check('shipped page has PIN mode off (demo stays unblocked)',
+    /var PIN_REQUIRED = false;/.test(shipped));
+  check('shipped page posts to the juiceworks-api site',
+    /var ENDPOINT = 'https:\/\/juiceworks-api\.netlify\.app\/submit-checklist';/.test(shipped));
 
   // ── iPad ─────────────────────────────────────────────────────────────────
   // This gets handed to a crew boss on an iPad Pro, so the layout has to hold

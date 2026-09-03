@@ -36,37 +36,43 @@ GitHub Contents API write.
 
 ## Deploying
 
-**1. Deploy the function to Netlify.** Connect this repo as a new Netlify site.
-`netlify.toml` already sets the publish directory (`docs`), the functions
-directory, and the `/submit-checklist` redirect, so there is nothing to
-configure in the UI beyond the env vars.
+The function goes on the **existing juiceworks-api Netlify site**, next to
+CarrierCalc's `/lead` endpoint — one site, one set of env vars, one bill. The
+two pages are served by GitHub Pages from this repo.
 
-**2. Create the token and set the env vars.** See
-[`.env.example`](.env.example) for exactly how to scope the fine-grained PAT
-(Contents: read & write, this repo only — nothing else). Set `GITHUB_TOKEN` and
-`GITHUB_REPO` under Site configuration → Environment variables. The real token
-is never committed; `.env` is gitignored.
+**1. Copy the function across.** Drop
+[`netlify/functions/submit-checklist.js`](netlify/functions/submit-checklist.js)
+into that site's functions directory. It is deliberately self-contained — it
+carries its own copy of the checklist and has no dependencies — so it is the
+only file to copy.
 
-**3. Point the form at the deployed function.** Netlify gives the site a
-domain; put it in the `ENDPOINT` constant near the top of the script in
-`docs/index.html`. It currently reads:
+**2. Add the redirect** to that site's `netlify.toml`, so the clean path works
+the way `/lead` does:
 
-```js
-var ENDPOINT = 'https://tcr-checklist.netlify.app/submit-checklist';
+```toml
+[[redirects]]
+  from = "/submit-checklist"
+  to = "/.netlify/functions/submit-checklist"
+  status = 200
 ```
 
-There is deliberately no `?api=` URL override — that would let anyone hand a
-crew boss a link that quietly posts the crew's details somewhere else.
+**3. Set the env vars** on that site: `GITHUB_TOKEN` and `GITHUB_REPO`. See
+[`.env.example`](.env.example) for exactly how to scope the fine-grained PAT —
+Contents read & write, this repo only, nothing else. The existing CarrierCalc
+vars are untouched; these are additions.
 
-**4. Enable GitHub Pages.** Settings → Pages → Source: *Deploy from a branch*,
-branch `main`, folder `/docs`.
+**4. Enable GitHub Pages** here. Settings → Pages → Source: *Deploy from a
+branch*, branch `main`, folder `/docs`.
 
-**5. Run one end-to-end test.** Submit the form on a phone and confirm the
-record appears in `data/submissions/` and on the dashboard.
+**5. Run one end-to-end test.** Submit from a phone, confirm the record lands in
+`data/submissions/` and shows on the dashboard.
 
-> Steps 1, 2, 4 and 5 need account access and a token, so they have **not** been
-> done — the code is ready but nothing is deployed or tested end to end against
-> the real GitHub API yet. Everything is verified against a mocked API (below).
+The page already points at `https://juiceworks-api.netlify.app/submit-checklist`,
+so no code change is needed if the site keeps that domain.
+
+> Steps 1–5 need account access and a token, so they have **not** been done —
+> the code is ready but nothing is deployed or tested against the real GitHub
+> API yet. Everything is verified against a mocked API (below).
 
 ## Tests
 
@@ -80,15 +86,19 @@ NODE_PATH=$(npm root -g) node tools/test-pages.js
 
 `tools/test-pages.js` drives both pages in a real browser: validation, the full
 submit flow, the exact payload the function will receive, hostile input, and the
-dashboard's populated / empty / rate-limited / offline states. 118 assertions
+dashboard's populated / empty / rate-limited / offline states. 188 assertions
 across the function and browser suites, all passing.
 
-The checklist wording lives in two places — `checklist-items.json` (canonical,
-what the function validates against) and the `CHECKLIST` array in
-`docs/index.html` (what a crew boss reads). **Edit one, edit both**, then run
-`verify-checklist-sync.js`. The function rejects any submission whose item text
-does not match the canonical list, so drift would otherwise turn every
-submission into a 400.
+The checklist wording lives in **three** places: `checklist-items.json`
+(canonical), the `CHECKLIST` array in `docs/index.html` (what a crew boss
+reads), and an inlined copy inside the function (what the server validates
+against). The function carries its own copy because it is deployed alone into
+the juiceworks-api site, where this repo's root is not on disk — a `require` of
+`checklist-items.json` would throw on the first invocation.
+
+**Edit one, edit all three**, then run `verify-checklist-sync.js`, which fails on
+any drift. The function rejects submissions whose item text does not match its
+copy, so drift would otherwise turn every submission into a 400.
 
 ## The checklist
 
@@ -136,6 +146,7 @@ One file per submission, `data/submissions/<timestamp>_<name-slug>.json`:
       "confirmed": false, "pendingLegalReview": true }
   ],
   "allConfirmed": true,
+  "identityVerified": false,
   "checklistVersion": "0.1.0-prototype",
   "prototype": true,
   "legalReviewPending": true
@@ -145,6 +156,11 @@ One file per submission, `data/submissions/<timestamp>_<name-slug>.json`:
 `submittedAt` is the server's clock and is what the filename and the dashboard
 use; `clientSubmittedAt` is what the phone reported, kept beside it because a
 phone's clock is whatever the phone says it is.
+
+`identityVerified` is `false` while PINs are off — the name is simply what
+someone typed. With PINs on it is `true`, `crewBossName` comes from the roster
+rather than the box, and a disagreeing typed name is kept as `typedName`. The
+PIN itself never appears in the file.
 
 ## Notes on the code
 
@@ -194,10 +210,16 @@ Type is Fraunces + Spline Sans, matching CarrierCalc, so the tools look related.
 - ~~The logo is missing.~~ Resolved — the real mark is committed at
   [`docs/assets/tcr_logo.png`](docs/assets/tcr_logo.png), extracted from
   `TCR_Purpose_Statement_and_Values.pdf` with its transparency intact.
-- **Nothing is deployed.** Deploy steps 1, 2, 4 and 5 above need account access.
-- **Anyone who knows the endpoint can post a submission.** There is no
-  authentication and no rate limit; a name is just typed in. Fine for a
-  prototype, not fine as the real workflow — see the open questions.
+- **Nothing is deployed.** Every deploy step above needs account access.
+- **Anyone who knows the endpoint can post a submission**, while PINs are off —
+  which is the current state, deliberately, so the demo is not blocked. A name
+  is just typed in. Turning PINs on closes the "filed under the wrong name" gap
+  but is still not authentication; see the PIN section for what it does and
+  does not buy.
+- **No rate limiting** on the endpoint at all. Nothing stops someone filling
+  `data/submissions/` with junk, or burning the site's function quota — which
+  now matters more, since that quota is shared with CarrierCalc's lead capture.
+- **Submission data is public** while the repo is. Keep the test records fake.
 
 ## Ownership and license
 
@@ -222,33 +244,68 @@ A one-line version of this sits in the footer of both pages.
 > still needs filling in. Worth putting in front of the same lawyer at the same
 > time — it is a small addition to a review that is already happening.
 
-## Open questions for Justin
+## Decisions
 
-**1. Should this repo be public or private?** It is public now, which is what
-makes the no-auth dashboard work: it reads `data/submissions/` straight from
-GitHub with no token. The tradeoff is that **every crew boss name and job
-address is publicly readable by anyone**, including search engines, forever.
-Making the repo private breaks the dashboard as built — reading submissions
-would then need a token, which means a second Netlify function to proxy the
-reads (an hour or two of work, not a redesign). Worth deciding before real jobs
-go through it, because submissions already committed to a public repo stay in
-the git history even after the repo is flipped to private.
+**Repo stays public for now.** It is a demo — public is what makes the no-auth
+dashboard work with no token and nothing to deploy. The tradeoff is live and
+real: every crew boss name and job address in `data/submissions/` is readable by
+anyone, and it stays in the git history even after the repo is later flipped to
+private. So keep the test data fake. When this goes into real use the repo goes
+private, the CarrierCalc-core way, and the dashboard then needs a second
+function to proxy the reads with the token (an hour or two, not a redesign).
 
-**2. Do you want a PIN or phone-number check per crew boss?** Right now a
-submission is just a typed name, so anyone with the link can file one under
-anyone's name — which undercuts the point if these records are ever meant to
-show who confirmed what. Out of scope for v1 as agreed, but this is the gap that
-matters most before it becomes the real workflow. A per-crew-boss PIN is the
-cheap version; a magic link to a known phone number is the sturdier one.
+**PINs: built, switched off.** Per-crew-boss PINs are implemented end to end and
+default to off, so today's demo is unblocked. See below to turn them on.
 
-**3. Retention — keep every submission forever, or roll off?** Every submission
-is a git commit, so "delete after 90 days" means rewriting history, not just
-removing files. If there is any chance of a retention policy, it is much cheaper
-to decide now than to unpick later. Related: these records could be either an
-asset or a liability in a dispute, which is really a question for the same lawyer
-reviewing the checklist language.
+**The function lives on the juiceworks-api site**, next to CarrierCalc's
+`/lead`. It is self-contained specifically so that move is a one-file copy.
 
-**4. Which Netlify site should the function live on?** It could go on the
-existing `juiceworks-api` site alongside the CarrierCalc lead endpoint (one site
-to maintain, one set of env vars) or on its own. This repo is set up for its own
-site; say the word and it can point at the existing one instead.
+**Retention is still open.** Every submission is a git commit, so "delete after
+90 days" means rewriting history rather than deleting files. Cheaper to decide
+before there is much history — and worth asking the same lawyer, since these
+records cut both ways in a dispute.
+
+## Crew boss PINs
+
+Off by default. To turn them on, do **both** of these together:
+
+1. Set `CREW_PINS` on the juiceworks-api site to a JSON map of PIN to name:
+   `{"481027":"John Smith","730914":"Ana Reyes"}`
+2. Flip `PIN_REQUIRED` to `true` in `docs/index.html`.
+
+One without the other either adds a box nobody checks, or rejects every
+submission with a 401.
+
+With PINs on, **the roster decides who the record belongs to**, not the name
+typed into the box — so a crew boss cannot file under someone else's name. The
+PIN is never written into the submission file; these files are public. If the
+typed name disagrees with the roster, the roster name is recorded and the typed
+one is kept alongside it as `typedName`. A `CREW_PINS` value that is set but
+malformed **fails closed** — submissions are refused rather than quietly
+reverting to an open checklist.
+
+**Be clear-eyed about what this buys.** A PIN is a speed bump against someone
+filing under the wrong name, not authentication:
+
+- PINs sit in an env var in plain text. Anyone with access to the Netlify site
+  can read the whole roster.
+- There is no rate limiting, so a 6-digit PIN is brute-forceable in principle.
+  In practice a brute-force attempt would burn through the site's function
+  invocations first, which is its own problem — it would take CarrierCalc's
+  lead capture down with it.
+- Use 6 digits, not 4. Do not reuse anything a crew boss uses elsewhere.
+- Everyone who has ever seen a crew boss's PIN can file as them, forever, until
+  it is changed.
+
+If identity ever needs to actually hold up — a dispute, an insurance claim — the
+answer is a magic link to a known phone number, not a shared digit string. Worth
+raising with the same lawyer.
+
+## Still open
+
+- **Retention.** Keep every submission forever, or roll off? See above — it is
+  a history-rewrite question, not a delete-files question.
+- **The Netlify billing setup.** Noted as still being sorted; nothing here
+  depends on it beyond having the juiceworks-api site available.
+- **Whether the two legal placeholders should become confirmable checkboxes**
+  once counsel supplies real language. Right now they are deliberately not.

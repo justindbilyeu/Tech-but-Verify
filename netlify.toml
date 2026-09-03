@@ -1,18 +1,28 @@
-# Netlify hosts one thing: the function that holds the GitHub token.
-# GitHub Pages (serving /docs) is the canonical home for the two pages.
+# Reference configuration.
 #
-# `publish` still points at docs/ deliberately -- Netlify's default would
-# publish the repo root, which would put data/submissions/ and this config on a
-# second public URL. Publishing docs/ instead means the Netlify domain serves a
-# working same-origin copy of the form, which is handy for testing before the
-# Pages URL is wired up.
+# The decision is that this function lives on the EXISTING juiceworks-api
+# Netlify site, next to CarrierCalc's /lead endpoint -- one site, one set of
+# env vars, one Netlify bill. So the settings that matter are the redirect
+# below, which needs adding to that site's own netlify.toml:
+#
+#   [[redirects]]
+#     from = "/submit-checklist"
+#     to = "/.netlify/functions/submit-checklist"
+#     status = 200
+#
+# ...alongside dropping netlify/functions/submit-checklist.js into its
+# functions directory. That file is self-contained -- it carries its own copy
+# of the checklist and has no dependencies -- so it is the only file to copy.
+#
+# This config still works if you ever deploy THIS repo as its own Netlify site
+# instead (for `netlify dev`, or a staging copy). `publish` points at docs/
+# deliberately: Netlify's default would publish the repo root, putting
+# data/submissions/ and this file on a second public URL.
 
 [build]
   publish = "docs"
   functions = "netlify/functions"
 
-# Gives the function the clean path the page posts to, matching the
-# CarrierCalc convention of /lead rather than /.netlify/functions/lead.
 [[redirects]]
   from = "/submit-checklist"
   to = "/.netlify/functions/submit-checklist"

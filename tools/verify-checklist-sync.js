@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 'use strict';
-// The checklist lives in two places: checklist-items.json (canonical, what the
-// Netlify function validates against) and the CHECKLIST array inside
-// docs/index.html (what a crew boss actually reads). The function matches
-// submitted item text against the canonical list, so any drift between the two
-// turns every submission into a 400. This catches that drift.
+// The checklist lives in three places:
+//
+//   checklist-items.json                    canonical, the wording of record
+//   docs/index.html (CHECKLIST)             what a crew boss actually reads
+//   netlify/functions/submit-checklist.js   what the server validates against
+//
+// The function carries its own copy because it is deployed alone into the
+// juiceworks-api Netlify site, where the repo root is not on disk. It matches
+// submitted item text against that copy, so drift between any two of the three
+// turns every submission into a 400. This catches it.
 //
 //   node tools/verify-checklist-sync.js
 
@@ -33,29 +38,46 @@ if (/[`(]|=>/.test(skeleton)) {
 }
 const fromPage = new Function('return ' + m[1])();
 
+// The function exports its inlined copy, so no source parsing needed here.
+const fromFn = require(path.join(root, 'netlify', 'functions', 'submit-checklist.js'))
+  ._internal.canonical;
+
 const flat = (cats) => cats.flatMap((c) =>
   c.items.map((i) => [c.name, i.id, i.text, !!i.pendingLegalReview].join('   ')));
 
-const a = flat(canonical.categories);
-const b = flat(fromPage);
+const copies = [
+  ['checklist-items.json', flat(canonical.categories)],
+  ['docs/index.html', flat(fromPage)],
+  ['netlify/functions/submit-checklist.js', flat(fromFn.categories)]
+];
 
+const [refName, ref] = copies[0];
 const problems = [];
-if (a.length !== b.length) {
-  problems.push('item count differs: checklist-items.json has ' + a.length +
-                ', docs/index.html has ' + b.length);
-}
-for (let i = 0; i < Math.max(a.length, b.length); i++) {
-  if (a[i] !== b[i]) {
-    problems.push('item ' + (i + 1) + ' differs:\n      canonical: ' +
-                  (a[i] || '(missing)') + '\n      page:      ' + (b[i] || '(missing)'));
+
+for (const [name, list] of copies.slice(1)) {
+  if (list.length !== ref.length) {
+    problems.push(name + ': has ' + list.length + ' items, ' +
+                  refName + ' has ' + ref.length);
+  }
+  for (let i = 0; i < Math.max(ref.length, list.length); i++) {
+    if (ref[i] !== list[i]) {
+      problems.push(name + ', item ' + (i + 1) + ':\n      ' + refName + ': ' +
+                    (ref[i] || '(missing)') + '\n      ' + name + ': ' +
+                    (list[i] || '(missing)'));
+    }
   }
 }
 
+if (canonical.version !== fromFn.version) {
+  problems.push('version differs: ' + refName + ' says ' + canonical.version +
+                ', the function says ' + fromFn.version);
+}
+
 if (problems.length) {
-  console.error('FAIL: docs/index.html and checklist-items.json are out of sync\n');
+  console.error('FAIL: the three copies of the checklist are out of sync\n');
   problems.forEach((p) => console.error('  - ' + p));
   process.exit(1);
 }
-console.log('OK: ' + a.length + ' items in sync across checklist-items.json and docs/index.html');
-console.log('    ' + a.filter((x) => x.endsWith('true')).length + ' pending legal review, ' +
-            a.filter((x) => x.endsWith('false')).length + ' confirmable');
+console.log('OK: ' + ref.length + ' items in sync across all three copies');
+console.log('    ' + ref.filter((x) => x.endsWith('true')).length + ' pending legal review, ' +
+            ref.filter((x) => x.endsWith('false')).length + ' confirmable');
