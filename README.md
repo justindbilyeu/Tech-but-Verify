@@ -36,52 +36,42 @@ GitHub Contents API write.
 
 ## Deploying
 
-**The function runs on Cloudflare Workers**, at
-`https://tcr-checklist.justindbilyeu.workers.dev`, deployed from `adapters/` on
-every push to `main`. The two pages are served by GitHub Pages from this repo.
-Netlify is no longer in the path — see [`adapters/`](adapters/) for why and for
-the Netlify instructions, which still work if you want them.
+Two moving parts, neither of them Netlify any more.
 
-**1. Copy the function across.** Drop
-[`netlify/functions/submit-checklist.js`](netlify/functions/submit-checklist.js)
-into that site's functions directory. It is deliberately self-contained — it
-carries its own copy of the checklist and has no dependencies — so it is the
-only file to copy.
+**The pages** are served by **GitHub Pages** from this repo: Settings → Pages →
+Source *Deploy from a branch*, branch `main`, folder `/docs`. Pushing to `main`
+republishes them.
 
-**2. Add the redirect** to that site's `netlify.toml`, so the clean path works
-the way `/lead` does:
+| | |
+|---|---|
+| Checklist | https://justindbilyeu.github.io/Tech-but-Verify/ |
+| Dashboard | https://justindbilyeu.github.io/Tech-but-Verify/dashboard.html |
 
-```toml
-[[redirects]]
-  from = "/submit-checklist"
-  to = "/.netlify/functions/submit-checklist"
-  status = 200
-```
+**The endpoint** is a **Cloudflare Worker** at
+`https://tcr-checklist.justindbilyeu.workers.dev`, built from
+[`adapters/`](adapters/) on every push to `main` — root directory `adapters`,
+deploy command `npx wrangler deploy`, no build command. The handler in
+`netlify/functions/` is unchanged and still Netlify-shaped; a small adapter
+translates. See [`adapters/README.md`](adapters/README.md) for how and why,
+including the Netlify instructions, which still work if you ever want them back.
 
-**Or don't use Netlify at all.** Netlify pauses production deploys when a team
-runs out of credits — published sites stay live, new code stops shipping, and
-the failure mode is that a fix exists and cannot be deployed. The same handler
-runs unchanged on Cloudflare Workers via [`adapters/`](adapters/), which is one
-`wrangler deploy` and a one-line change to `ENDPOINT` in the page. Nothing in
-the function itself changes, and the same tests cover both.
+**Two secrets** on the Worker (Settings → Variables and Secrets, type
+**Secret**):
 
-**3. Set the env vars** on that site: `GITHUB_TOKEN` and `GITHUB_REPO`. See
-[`.env.example`](.env.example) for exactly how to scope the fine-grained PAT —
-Contents read & write, this repo only, nothing else. The existing CarrierCalc
-vars are untouched; these are additions.
+| Name | Value |
+|---|---|
+| `GITHUB_TOKEN` | fine-grained PAT — see [`.env.example`](.env.example) for the exact scoping |
+| `GITHUB_REPO` | `justindbilyeu/Tech-but-Verify` |
 
-**4. Enable GitHub Pages** here. Settings → Pages → Source: *Deploy from a
-branch*, branch `main`, folder `/docs`.
+`ALLOWED_ORIGIN` is already set in `adapters/wrangler.toml` under `[vars]`,
+because it is not a secret and is worth seeing in a diff. Without the two above
+the endpoint answers `500 Server is not configured` — refusing on purpose
+rather than half-working.
 
-**5. Run one end-to-end test.** Submit from a phone, confirm the record lands in
-`data/submissions/` and shows on the dashboard.
-
-The page points at `https://tcr-checklist.justindbilyeu.workers.dev`,
-so no code change is needed if the site keeps that domain.
-
-> Steps 1–5 need account access and a token, so they have **not** been done —
-> the code is ready but nothing is deployed or tested against the real GitHub
-> API yet. Everything is verified against a mocked API (below).
+**Why it moved.** Netlify pauses production deploys when a team runs out of
+credits. Published sites stay live and new code stops shipping, so the failure
+mode is that a fix exists and cannot be deployed. That is a fine trade for a
+hobby project and a bad one for a form a crew boss opens every morning.
 
 ## Tests
 
@@ -108,9 +98,10 @@ the function, adapter and browser suites, all passing.
 The checklist wording lives in **three** places: `checklist-items.json`
 (canonical), the `CHECKLIST` array in `docs/index.html` (what a crew boss
 reads), and an inlined copy inside the function (what the server validates
-against). The function carries its own copy because it is deployed alone into
-the juiceworks-api site, where this repo's root is not on disk — a `require` of
-`checklist-items.json` would throw on the first invocation.
+against). The function carries its own copy because it gets deployed alone —
+onto a Worker, or dropped into someone else's Netlify site — where this repo's
+root is not on disk. A `require` of `checklist-items.json` would throw on the
+first invocation.
 
 **Edit one, edit all three**, then run `verify-checklist-sync.js`, which fails on
 any drift. The function rejects submissions whose item text does not match its
@@ -273,8 +264,8 @@ function to proxy the reads with the token (an hour or two, not a redesign).
 **PINs: built, switched off.** Per-crew-boss PINs are implemented end to end and
 default to off, so today's demo is unblocked. See below to turn them on.
 
-**The function was originally deployed to the juiceworks-api site**, next to CarrierCalc's
-`/lead`. It is self-contained specifically so that move is a one-file copy.
+**The function is self-contained on purpose**, which is what let it move from
+Netlify to a Cloudflare Worker without being rewritten.
 
 **Retention is still open.** Every submission is a git commit, so "delete after
 90 days" means rewriting history rather than deleting files. Cheaper to decide
@@ -322,7 +313,8 @@ raising with the same lawyer.
 
 - **Retention.** Keep every submission forever, or roll off? See above — it is
   a history-rewrite question, not a delete-files question.
-- **The Netlify billing setup.** Noted as still being sorted; nothing here
-  depends on it beyond having the juiceworks-api site available.
+- **Nothing depends on Netlify any more.** The endpoint is a Cloudflare Worker
+  and the pages are on GitHub Pages, so the paused Netlify credits no longer
+  block anything here.
 - **Whether the two legal placeholders should become confirmable checkboxes**
   once counsel supplies real language. Right now they are deliberately not.
