@@ -56,6 +56,13 @@ the way `/lead` does:
   status = 200
 ```
 
+**Or don't use Netlify at all.** Netlify pauses production deploys when a team
+runs out of credits — published sites stay live, new code stops shipping, and
+the failure mode is that a fix exists and cannot be deployed. The same handler
+runs unchanged on Cloudflare Workers via [`adapters/`](adapters/), which is one
+`wrangler deploy` and a one-line change to `ENDPOINT` in the page. Nothing in
+the function itself changes, and the same tests cover both.
+
 **3. Set the env vars** on that site: `GITHUB_TOKEN` and `GITHUB_REPO`. See
 [`.env.example`](.env.example) for exactly how to scope the fine-grained PAT —
 Contents read & write, this repo only, nothing else. The existing CarrierCalc
@@ -79,6 +86,7 @@ so no code change is needed if the site keeps that domain.
 ```bash
 node tools/verify-checklist-sync.js      # the two copies of the checklist agree
 node tools/test-submit-checklist.js      # the function, against a mocked GitHub API
+node tools/test-adapter.mjs              # the same function, running as a Worker
 
 # needs playwright available; deliberately not a declared dependency
 NODE_PATH=$(npm root -g) node tools/test-pages.js
@@ -86,8 +94,14 @@ NODE_PATH=$(npm root -g) node tools/test-pages.js
 
 `tools/test-pages.js` drives both pages in a real browser: validation, the full
 submit flow, the exact payload the function will receive, hostile input, and the
-dashboard's populated / empty / rate-limited / offline states. 188 assertions
-across the function and browser suites, all passing.
+dashboard's populated / empty / rate-limited / offline states.
+
+`tools/test-adapter.mjs` runs the real handler end to end through the Worker
+adapter with `fetch` stubbed, then does it again with `globalThis.Buffer`
+deleted — the actual condition on a Worker, and the only way to know the shim
+is exercised rather than merely present. It also checks that the rule a
+malformed PIN roster fails **closed** survives the move. 243 assertions across
+the function, adapter and browser suites, all passing.
 
 The checklist wording lives in **three** places: `checklist-items.json`
 (canonical), the `CHECKLIST` array in `docs/index.html` (what a crew boss
