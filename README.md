@@ -199,6 +199,29 @@ Type is Fraunces + Spline Sans, matching CarrierCalc, so the tools look related.
   authentication and no rate limit; a name is just typed in. Fine for a
   prototype, not fine as the real workflow — see the open questions.
 
+## Ownership and license
+
+Short version, in full in [`NOTICE.md`](NOTICE.md):
+
+- **The tool is JuiceWorks'.** The app, the dashboard, the function, the data
+  model, and the tooling are © JuiceWorks, proprietary, all rights reserved.
+  This is not open source.
+- **The brand and the standards are Texas Choice Roofing's.** The name, the
+  logo, the brand colours, the purpose statement, and the substance of the
+  safety requirements are TCR's property. JuiceWorks claims none of it.
+- **TCR's licence is free and permanent.** A perpetual, worldwide,
+  royalty-free, non-exclusive licence to use, run, host, and modify the tool
+  for TCR's own business — no fee, no expiry, not conditional on any continuing
+  relationship. What it does not cover is reselling or licensing the tool onward
+  to third parties as a product; that stays with JuiceWorks.
+
+A one-line version of this sits in the footer of both pages.
+
+> Like the checklist language, this is a plain statement of intent rather than a
+> drafted agreement, and it names "JuiceWorks" where the exact legal entity
+> still needs filling in. Worth putting in front of the same lawyer at the same
+> time — it is a small addition to a review that is already happening.
+
 ## Open questions for Justin
 
 **1. Should this repo be public or private?** It is public now, which is what

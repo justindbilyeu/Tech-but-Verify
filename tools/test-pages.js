@@ -80,6 +80,9 @@ const check = (label, cond, extra) => {
   check('eyebrow label present',
     (await page.locator('.eyebrow').textContent()).trim() === 'Pre-job crew boss checklist');
   check('prototype banner visible', await page.locator('.proto').isVisible());
+  const legal = (await page.locator('footer .legal').textContent()).replace(/\s+/g, ' ');
+  check('ownership notice in the footer',
+    /JuiceWorks/.test(legal) && /property of Texas Choice Roofing/.test(legal), legal);
 
   console.log('\n2. structure');
   const cats = await page.locator('.card-head h2').allTextContents();
@@ -171,8 +174,22 @@ const check = (label, cond, extra) => {
     await page.locator('#e-form').textContent());
   check('no rows left highlighted', await page.locator('.items li.bad').count() === 0,
     await page.locator('.items li.bad').count());
-  const barColor = await page.locator('#bar-fill').evaluate((el) => getComputedStyle(el).backgroundColor);
-  check('progress bar turns green when complete', barColor === 'rgb(21, 128, 61)', barColor);
+  // Regression: the completion class used to be `done`, which collided with the
+  // success card's `.done{display:none}` and hid the bar at exactly 100%.
+  // Checking the colour alone missed it -- computed style still resolves on a
+  // display:none element -- so assert the bar is actually laid out.
+  await page.waitForTimeout(400);   // the fill has a 0.25s width transition
+  const bar = await page.locator('#bar').evaluate((el) => ({
+    color: getComputedStyle(el.firstElementChild).backgroundColor,
+    display: getComputedStyle(el).display,
+    w: Math.round(el.getBoundingClientRect().width),
+    fillW: Math.round(el.firstElementChild.getBoundingClientRect().width)
+  }));
+  check('progress bar turns green when complete', bar.color === 'rgb(21, 128, 61)', bar.color);
+  check('progress bar is still visible at 100%', bar.display !== 'none' && bar.w > 0,
+    bar.display + ' w=' + bar.w);
+  check('progress fill spans the bar at 100%', bar.fillW === bar.w,
+    bar.fillW + ' of ' + bar.w);
   await page.screenshot({ path: path.join(OUT, 'checklist-filled.png'), fullPage: true });
 
   await page.locator('#submit').click();
@@ -225,6 +242,58 @@ const check = (label, cond, extra) => {
   check('no injected img element', await p2.locator('#d-name img').count() === 0);
   await p2.close();
 
+  // ── iPad ─────────────────────────────────────────────────────────────────
+  // This gets handed to a crew boss on an iPad Pro, so the layout has to hold
+  // up at those sizes rather than sitting in a 640px strip.
+  console.log('\n7b. iPad layouts');
+  const IPADS = [
+    ['iPad Pro 11 portrait',   834, 1194, 1],
+    ['iPad Pro 11 landscape',  1194, 834, 2],
+    ['iPad Pro 12.9 portrait', 1024, 1366, 1],
+    ['iPad Pro 12.9 landscape', 1366, 1024, 2]
+  ];
+  for (const [label, vw, vh, wantCols] of IPADS) {
+    const t = await ctx.newPage();
+    await t.route('https://fonts.g**/**', (r) => r.abort());
+    await t.setViewportSize({ width: vw, height: vh });
+    await t.goto('file://' + path.join(DOCS, 'index.html'));
+    await t.fill('#crewBossName', 'John Smith');
+    await t.fill('#jobAddress', '1204 Oak Hollow Dr, Houston, TX 77008');
+    for (let i = 0; i < 13; i++) await t.locator('.row').nth(i).click();
+    await t.waitForTimeout(250);
+    const m = await t.evaluate(() => {
+      const cs = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop];
+      const cols = cs('#sections', 'columnCount');
+      return {
+        cols: cols === 'auto' ? 1 : parseInt(cols, 10),
+        rowH: Math.round(document.querySelector('.row').getBoundingClientRect().height),
+        box: Math.round(document.querySelector('.box').getBoundingClientRect().width),
+        font: parseFloat(cs('.txt', 'fontSize')),
+        wrapW: Math.round(document.querySelector('.wrap').getBoundingClientRect().width),
+        scrollW: document.documentElement.scrollWidth,
+        btnW: Math.round(document.getElementById('submit').getBoundingClientRect().width),
+        logoW: Math.round(document.getElementById('logo').getBoundingClientRect().width)
+      };
+    });
+    await t.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await t.waitForTimeout(150);
+    const clear = await t.evaluate(() => {
+      const ab = document.querySelector('.actionbar').getBoundingClientRect();
+      const f = document.querySelector('footer').getBoundingClientRect();
+      return Math.round(ab.top - f.bottom);
+    });
+    check(label + ': ' + wantCols + '-column checklist', m.cols === wantCols, m.cols);
+    check(label + ': no horizontal overflow', m.scrollW <= vw, m.scrollW);
+    check(label + ': tap rows >= 60px', m.rowH >= 60, m.rowH);
+    check(label + ': checkbox grown to 32px', m.box === 32, m.box);
+    check(label + ': item text >= 16px', m.font >= 16, m.font);
+    check(label + ': content uses the width', m.wrapW >= Math.min(vw, 820), m.wrapW);
+    check(label + ': submit button capped, not a slab', m.btnW >= 320 && m.btnW <= 500, m.btnW);
+    check(label + ': footer clears the action bar', clear >= 0, clear);
+    await t.screenshot({ path: path.join(OUT, 'ipad-' + vw + 'x' + vh + '.png') });
+    await t.close();
+  }
+
   // ── Dashboard, on a desktop ──────────────────────────────────────────────
   console.log('\n8. dashboard');
   const dctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
@@ -275,6 +344,9 @@ const check = (label, cond, extra) => {
   const dMast = await d.locator('.masthead')
     .evaluate((el) => getComputedStyle(el).backgroundColor);
   check('dashboard masthead is light', dMast === 'rgb(255, 255, 255)', dMast);
+  const dLegal = (await d.locator('footer .legal').textContent()).replace(/\s+/g, ' ');
+  check('dashboard carries the ownership notice too',
+    /JuiceWorks/.test(dLegal) && /property of Texas Choice Roofing/.test(dLegal), dLegal);
   check('3 rows rendered', await d.locator('.srow').count() === 3,
     await d.locator('.srow').count());
   const order = await d.locator('.srow .who').allTextContents();

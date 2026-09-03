@@ -4,3 +4,7 @@
 node_modules/
 .netlify/
 .DS_Store
+
+# stray screenshots from test runs
+*.png
+!docs/assets/*.png

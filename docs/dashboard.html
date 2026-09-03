@@ -115,9 +115,30 @@ body{margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink)
   .srow .rawcell{grid-area:raw;justify-self:end}
 }
 
+/* Tablet: the stacked-card layout below 760px is right for a phone and for a
+   portrait iPad; from there up, grow the type so the table is readable at
+   arm's length rather than held close. */
+@media (min-width:761px){
+  .wrap{max-width:1120px;padding:24px 20px 44px}
+  .masthead img{max-width:270px}
+  .topline h1{font-size:1.8rem}
+  .srow{font-size:1rem;padding:16px 20px}
+  .hrow{padding:15px 20px;font-size:.68rem}
+  .srow .when{font-size:.92rem}
+  .pill{font-size:.78rem;padding:5px 12px}
+  .srow a.raw{font-size:.86rem}
+  .stat{padding:13px 17px;min-width:116px}
+  .stat .n{font-size:1.65rem}
+  .tools input{font-size:1rem;padding:13px 15px;max-width:400px}
+  .note{font-size:.94rem;padding:18px}
+}
+
 footer{max-width:1000px;margin:0 auto;padding:2px 18px 30px;font-size:.78rem;
   color:var(--muted);text-align:center}
+footer p{margin:0}
 footer a{color:var(--muted)}
+.legal{margin-top:9px!important;font-size:.72rem;line-height:1.5;opacity:.85;
+  max-width:52ch;margin-left:auto;margin-right:auto}
 .hide{display:none!important}
 </style>
 </head>
@@ -173,8 +194,9 @@ footer a{color:var(--muted)}
 </div>
 
 <footer>
-  Texas Choice Roofing · internal prototype ·
-  <a href="index.html">open the checklist</a>
+  <p>Texas Choice Roofing · internal prototype ·
+     <a href="index.html">open the checklist</a></p>
+  <p class="legal">Checklist tool and code © JuiceWorks, all rights reserved, licensed to Texas Choice Roofing for its own use. “Texas Choice Roofing”, the TCR logo, and all TCR brand material remain the property of Texas Choice Roofing.</p>
 </footer>
 
 <script>

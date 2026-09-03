@@ -158,7 +158,7 @@ body{
 .bar{height:4px;background:var(--line-soft);border-radius:99px;overflow:hidden;margin-bottom:11px}
 .bar i{display:block;height:100%;width:0;background:var(--red);border-radius:99px;
   transition:width .25s ease}
-.bar.done i{background:var(--good)}
+.bar.full i{background:var(--good)}
 .btn{
   width:100%;font:inherit;font-size:1rem;font-weight:700;letter-spacing:.02em;
   padding:15px;border:none;border-radius:10px;background:var(--red);color:#fff;
@@ -185,10 +185,78 @@ body{
   text-transform:uppercase;margin-top:12px}
 .done dd{margin:3px 0 0;color:var(--ink);word-break:break-word}
 
+/* ── Tablet / iPad ───────────────────────────────────────────────────────── */
+/* This gets handed to a crew boss standing on a job site, so on a tablet
+   everything grows: a wider column, larger type, taller rows, and a checkbox
+   big enough to hit without aiming. A 640px column on an iPad Pro is a thin
+   strip down the middle of the screen. */
+@media (min-width:700px){
+  .wrap{max-width:860px;padding:26px 22px 0}
+  .masthead{padding:28px 20px 22px}
+  .masthead img{max-width:300px}
+  .eyebrow{font-size:.76rem;margin-top:17px}
+  .intro{font-size:1.02rem;padding:0 4px 20px}
+  .intro h1{font-size:2rem}
+  .card{border-radius:14px;margin-bottom:18px}
+  .card-head{padding:19px 22px 0}
+  .card-head h2{font-size:.8rem}
+  .card-head .rule{width:38px}
+
+  /* Name and address sit side by side once there is room for them. */
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 22px 22px}
+  .field+.field{margin-top:0}
+  .field label{font-size:.9rem}
+  .field input{font-size:1.06rem;padding:15px 16px}
+
+  .row{font-size:1.06rem;padding:20px 22px;min-height:68px;gap:17px}
+  .box{width:32px;height:32px;border-radius:8px}
+  .box svg{width:19px;height:19px}
+  .pending{padding:17px 22px;margin:12px 14px 14px}
+  .pending p{font-size:.96rem}
+  .pending .tag{font-size:.66rem}
+
+  .actionbar{padding:15px 22px calc(15px + env(safe-area-inset-bottom))}
+  .actionbar .inner{max-width:860px}
+  .progress{font-size:.85rem;margin-bottom:10px}
+  /* Full width is right on a phone; across an 860px tablet column it reads as
+     a slab, so cap it and centre it. */
+  .btn{font-size:1.1rem;padding:18px;max-width:460px;margin:0 auto;display:block}
+
+  .done{padding:34px 24px}
+  .done h2{font-size:1.65rem}
+  .done p{font-size:1rem}
+  footer{max-width:860px;font-size:.84rem}
+}
+
+/* Landscape iPad and up: two columns, so the whole checklist is visible at
+   once instead of being scrolled past while someone watches. A category is
+   never split across the gap -- break-inside keeps each card whole, and the
+   progress count in the action bar still guards against a missed item. */
+@media (min-width:1080px){
+  .wrap{max-width:1180px}
+  #sections{columns:2;column-gap:20px}
+  #sections .card{
+    break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;
+    margin-top:0;
+  }
+  .actionbar .inner{max-width:1180px;display:flex;align-items:center;gap:28px}
+  .actionbar .meter{flex:1;min-width:0}
+  .actionbar .progress{margin-bottom:8px}
+  .actionbar .bar{margin-bottom:0}
+  .btn{width:auto;flex:none;min-width:340px;max-width:none;margin:0}
+  footer{max-width:1180px}
+}
+
+/* Stops the 300ms double-tap-to-zoom delay on the things people tap most. */
+.row,.btn{touch-action:manipulation}
+
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 footer{max-width:640px;margin:0 auto;padding:6px 18px 26px;font-size:.78rem;
   color:var(--muted);text-align:center}
+footer p{margin:0}
 footer a{color:var(--muted)}
+.legal{margin-top:9px!important;font-size:.72rem;line-height:1.5;opacity:.85;
+  max-width:52ch;margin-left:auto;margin-right:auto}
 .hide{display:none!important}
 </style>
 </head>
@@ -268,18 +336,21 @@ footer a{color:var(--muted)}
 
 <div class="actionbar" id="actionbar">
   <div class="inner">
-    <div class="progress">
-      <span>Confirmed</span>
-      <span class="count"><span id="p-now">0</span> of <span id="p-all">0</span></span>
+    <div class="meter">
+      <div class="progress">
+        <span>Confirmed</span>
+        <span class="count"><span id="p-now">0</span> of <span id="p-all">0</span></span>
+      </div>
+      <div class="bar" id="bar"><i id="bar-fill"></i></div>
     </div>
-    <div class="bar" id="bar"><i id="bar-fill"></i></div>
     <button class="btn idle" type="submit" form="form" id="submit">Submit checklist</button>
   </div>
 </div>
 
 <footer>
-  Texas Choice Roofing · internal prototype ·
-  <a href="dashboard.html">submission history</a>
+  <p>Texas Choice Roofing · internal prototype ·
+     <a href="dashboard.html">submission history</a></p>
+  <p class="legal">Checklist tool and code © JuiceWorks, all rights reserved, licensed to Texas Choice Roofing for its own use. “Texas Choice Roofing”, the TCR logo, and all TCR brand material remain the property of Texas Choice Roofing.</p>
 </footer>
 
 <script>
@@ -409,7 +480,9 @@ footer a{color:var(--muted)}
     var n = confirmedCount(), all = boxes.length;
     $('p-now').textContent = String(n);
     $('bar-fill').style.width = (all ? (n / all) * 100 : 0) + '%';
-    $('bar').classList.toggle('done', n === all);
+    // Not 'done' -- that class belongs to the success card, whose display:none
+    // rule would hide the bar at exactly the moment it fills.
+    $('bar').classList.toggle('full', n === all);
     var ready = n === all && $('crewBossName').value.trim() && $('jobAddress').value.trim();
     submit.classList.toggle('idle', !ready);
 
