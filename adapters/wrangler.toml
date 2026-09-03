@@ -1,0 +1,27 @@
+# Cloudflare Worker deploy for the checklist endpoint.
+#
+#   npx wrangler deploy --config adapters/wrangler.toml
+#
+# Then set the secrets, which never go in this file:
+#   npx wrangler secret put GITHUB_TOKEN --config adapters/wrangler.toml
+#   npx wrangler secret put GITHUB_REPO  --config adapters/wrangler.toml
+#
+# GITHUB_TOKEN is a fine-grained PAT with Contents read+write on this repo and
+# nothing else. GITHUB_REPO is "justindbilyeu/Tech-but-Verify".
+#
+# CREW_PINS is optional and, if set, is also a secret - never a [vars] entry:
+#   npx wrangler secret put CREW_PINS --config adapters/wrangler.toml
+# Malformed JSON there fails closed, the same as it does on Netlify.
+#
+# No nodejs_compat flag. The adapter fills in the two Node things the handler
+# uses - process.env and Buffer - so this runs on a stock Worker, and would run
+# on Deno Deploy or anywhere else with fetch and no changes.
+
+name = "tcr-checklist"
+main = "submit-checklist.worker.mjs"
+compatibility_date = "2025-01-01"
+
+# The browser origin allowed to POST here. Not a secret, so it lives in the
+# file where it can be reviewed in a diff.
+[vars]
+ALLOWED_ORIGIN = "https://justindbilyeu.github.io"

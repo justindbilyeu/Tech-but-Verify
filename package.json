@@ -4,8 +4,9 @@
   "private": true,
   "description": "Pre-job crew boss checklist for Texas Choice Roofing (prototype, pending legal review)",
   "scripts": {
-    "test": "node tools/verify-checklist-sync.js && node tools/test-submit-checklist.js",
-    "test:pages": "node tools/test-pages.js"
+    "test": "node tools/verify-checklist-sync.js && node tools/test-submit-checklist.js && node tools/build-worker-bundle.js --check && node tools/test-adapter.mjs && node tools/test-worker-bundle.mjs",
+    "test:pages": "node tools/test-pages.js",
+    "build:worker": "node tools/build-worker-bundle.js"
   },
   "engines": {
     "node": ">=18"
