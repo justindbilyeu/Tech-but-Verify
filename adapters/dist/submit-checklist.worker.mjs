@@ -321,6 +321,31 @@ const exports = module.exports;
     if (name.length < 2 || name.length > 80) return 'crewBossName must be 2-80 characters.';
     if (addr.length < 5 || addr.length > 200) return 'jobAddress must be 5-200 characters.';
   
+    // The acknowledgment. The page will not let anybody past the signature pad,
+    // but the page is the friendly validator and not the only one - a submission
+    // that reaches here unsigned is refused rather than filed as if it had been.
+    const ack = payload.acknowledgment;
+    if (!ack || typeof ack !== 'object' || Array.isArray(ack)) {
+      return 'acknowledgment is required.';
+    }
+    if (ack.signed !== true) return 'acknowledgment.signed must be true.';
+    if (typeof ack.signerName !== 'string' || ack.signerName.trim().length < 2) {
+      return 'acknowledgment.signerName must be 2-80 characters.';
+    }
+    if (ack.signerName.trim() !== name) {
+      return 'acknowledgment.signerName must match crewBossName.';
+    }
+    if (typeof ack.statementVersion !== 'string' || !ack.statementVersion.trim()) {
+      return 'acknowledgment.statementVersion is required.';
+    }
+    // This repository is public. A drawn signature is personal data and does not
+    // belong in it. Refuse the image outright rather than trusting a client not
+    // to send one - the check is here so that turning storage on later is a
+    // deliberate act in this file, not an accident in the page.
+    if (ack.imageStored === true || typeof ack.image === 'string') {
+      return 'acknowledgment images are not accepted while this repository is public.';
+    }
+  
     if (!Array.isArray(payload.items)) return 'items must be an array.';
   
     const expected = CANONICAL.categories.flatMap((c) =>
@@ -499,6 +524,14 @@ const exports = module.exports;
     const record = {
       crewBossName: name,
       jobAddress: payload.jobAddress.trim(),
+      acknowledgment: {
+        signed: true,
+        signedAt: typeof payload.acknowledgment.signedAt === 'string'
+          ? payload.acknowledgment.signedAt.slice(0, 40) : null,
+        signerName: name,
+        statementVersion: payload.acknowledgment.statementVersion.trim().slice(0, 80),
+        imageStored: false
+      },
       submittedAt: receivedAt.toISOString(),
       clientSubmittedAt: typeof payload.submittedAt === 'string'
         ? payload.submittedAt.slice(0, 40) : null,

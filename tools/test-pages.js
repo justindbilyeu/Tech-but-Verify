@@ -31,6 +31,24 @@ const OUT = process.env.OUT || require('os').tmpdir();
 const CANON = require(path.join(ROOT, 'checklist-items.json'));
 
 let pass = 0, fail = 0;
+// A submission cannot go without a signature, so every test that expects one to
+// land has to draw one first. boundingBox() is viewport-relative, so the pad has
+// to be on screen before the mouse goes near it.
+async function sign(pg) {
+  const pad = pg.locator('#sigpad');
+  await pad.scrollIntoViewIfNeeded();
+  await pg.waitForTimeout(80);
+  const b = await pad.boundingBox();
+  const y = b.y + b.height / 2;
+  await pg.mouse.move(b.x + 30, y);
+  await pg.mouse.down();
+  for (const [dx, dy] of [[60, -26], [110, 20], [160, -16], [210, 14], [250, -20]]) {
+    await pg.mouse.move(b.x + 30 + dx, y + dy, { steps: 4 });
+  }
+  await pg.mouse.up();
+  await pg.waitForTimeout(80);
+}
+
 const check = (label, cond, extra) => {
   if (cond) { pass++; console.log('  ok   ' + label); }
   else { fail++; console.log('  FAIL ' + label + (extra !== undefined ? '  -> ' + extra : '')); }
@@ -98,15 +116,20 @@ const check = (label, cond, extra) => {
 
   console.log('\n2. structure');
   const cats = await page.locator('.card-head h2').allTextContents();
-  check('4 category headers in spec order',
-    JSON.stringify(cats) === JSON.stringify(['Job details', 'Safety', 'Visibility', 'Cleanliness', 'Crew readiness']),
+  check('headers in spec order, with the acknowledgment before the items',
+    JSON.stringify(cats) === JSON.stringify(['Job details', 'Crew boss acknowledgment',
+      'Safety', 'Visibility', 'Cleanliness', 'Crew readiness']),
     JSON.stringify(cats));
   const headerColor = await page.locator('.card-head h2').nth(1)
     .evaluate((el) => getComputedStyle(el).color);
   check('section headers are brand red', headerColor === 'rgb(186, 19, 19)', headerColor);
   check('13 confirmable checkboxes',
     await page.locator('.row input[type=checkbox]').count() === 13);
-  check('2 pending-legal placeholders', await page.locator('.pending').count() === 2);
+  // Three now: the two checklist items, plus the acknowledgment statement -
+  // the one a crew boss actually signs, and so the one that most needs to read
+  // as unfinished until counsel has written it.
+  check('3 pending-legal placeholders', await page.locator('.pending').count() === 3,
+    await page.locator('.pending').count());
   check('placeholders are not checkboxes',
     await page.locator('.pending input').count() === 0);
   check('placeholders labelled pending',
@@ -125,6 +148,49 @@ const check = (label, cond, extra) => {
 
   check('fitness-for-duty item sits at safety #4',
     (await page.locator('.row .txt').nth(3).textContent()).startsWith('All crew members are fit for duty'));
+
+  console.log('\n2b. the acknowledgment');
+  // A different kind of thing from the items: they are conditions somebody
+  // verified, this is a commitment somebody makes. It comes first because the
+  // items are what is being committed TO.
+  check('the acknowledgment sits above the checklist', await page.evaluate(() =>
+    document.getElementById('ack-card').getBoundingClientRect().top <
+    document.getElementById('sections').getBoundingClientRect().top));
+  check('the statement is a placeholder, not invented language',
+    /Pending legal review/.test(await page.locator('#ack-statement .tag').textContent()));
+  check('and it says counsel should check it against the contractor arrangement',
+    /independent-contractor/.test(await page.locator('#ack-statement p').textContent()));
+  check('there is a signature pad', await page.locator('#sigpad').isVisible());
+  check('it is big enough to sign with a thumb',
+    (await page.locator('#sigpad').boundingBox()).height >= 120,
+    (await page.locator('#sigpad').boundingBox()).height);
+
+  // The gate, and the thing that makes the rest mean something.
+  const solo = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await solo.route(ENDPOINT_GLOB, (r) => r.abort());
+  await solo.goto('file://' + path.join(ROOT, 'docs', 'index.html'));
+  await solo.evaluate(() => localStorage.clear());
+  await solo.reload();
+  await solo.fill('#crewBossName', 'Sample Crew Boss');
+  await solo.fill('#jobAddress', '12 Example St, Seguin, TX');
+  for (const cb of await solo.locator('.items input[type=checkbox]').all()) await cb.check();
+  await solo.waitForTimeout(120);
+  check('everything ticked but unsigned still will not send',
+    await solo.locator('#submit').evaluate((el) => el.classList.contains('idle')));
+  await solo.locator('#submit').click();
+  await solo.waitForTimeout(200);
+  check('and says so on the pad rather than in a banner',
+    await solo.locator('#e-sig').evaluate((el) => el.classList.contains('show')) &&
+    await solo.locator('#f-sig .sigwrap').evaluate((el) => el.classList.contains('bad')));
+  await sign(solo);
+  check('signing clears the error and marks the pad',
+    await solo.locator('#f-sig .sigwrap').evaluate((el) => el.classList.contains('signed')) &&
+    !(await solo.locator('#e-sig').evaluate((el) => el.classList.contains('show'))));
+  await solo.locator('#sig-clear').click();
+  await solo.waitForTimeout(100);
+  check('clearing it takes the submission back off the table',
+    await solo.locator('#submit').evaluate((el) => el.classList.contains('idle')));
+  await solo.close();
 
   console.log('\n3. tap targets and layout');
   const box = await page.locator('.row').first().boundingBox();
@@ -145,6 +211,7 @@ const check = (label, cond, extra) => {
   await page.evaluate(() => window.scrollTo(0, 0));
 
   console.log('\n4. validation blocks an empty submit');
+  await sign(page);
   await page.locator('#submit').click();
   await page.waitForTimeout(250);
   check('no POST fired', posted === null);
@@ -165,6 +232,7 @@ const check = (label, cond, extra) => {
   check('progress reads 1 of 13',
     (await page.locator('#p-now').textContent()) === '1' &&
     (await page.locator('#p-all').textContent()) === '13');
+  await sign(page);
   await page.locator('#submit').click();
   await page.waitForTimeout(200);
   check('still no POST', posted === null);
@@ -203,6 +271,8 @@ const check = (label, cond, extra) => {
   check('progress fill spans the bar at 100%', bar.fillW === bar.w,
     bar.fillW + ' of ' + bar.w);
   await page.screenshot({ path: path.join(OUT, 'checklist-filled.png'), fullPage: true });
+
+  await sign(page);
 
   await page.locator('#submit').click();
   await page.waitForTimeout(500);
@@ -246,6 +316,7 @@ const check = (label, cond, extra) => {
   await p2.fill('#crewBossName', '<img src=x onerror=alert(1)>');
   await p2.fill('#jobAddress', '<script>alert(2)</script> 500 Main St');
   for (let i = 0; i < 13; i++) await p2.locator('.row').nth(i).click();
+  await sign(p2);
   await p2.locator('#submit').click();
   await p2.waitForTimeout(500);
   check('no dialog fired', popped === false);
@@ -284,17 +355,20 @@ const check = (label, cond, extra) => {
     await pp.fill('#crewBossName', 'John Smith');
     await pp.fill('#jobAddress', '1204 Oak Hollow Dr, Houston, TX 77008');
     for (let i = 0; i < 13; i++) await pp.locator('.row').nth(i).click();
+    await sign(pp);
     await pp.locator('#submit').click();
     await pp.waitForTimeout(300);
     check('missing PIN blocks the submit client-side', sent === null);
     check('inline PIN error shown', await pp.locator('#e-pin').isVisible());
 
     await pp.fill('#crewPin', '12');
+    await sign(pp);
     await pp.locator('#submit').click();
     await pp.waitForTimeout(300);
     check('too-short PIN still blocked', sent === null);
 
     await pp.fill('#crewPin', '481027');
+    await sign(pp);
     await pp.locator('#submit').click();
     await pp.waitForTimeout(400);
     check('valid-looking PIN is sent', sent !== null && sent.pin === '481027',
@@ -308,6 +382,7 @@ const check = (label, cond, extra) => {
       !(await pp.locator('#submit').isDisabled()));
 
     replyWith = { status: 200, body: { ok: true } };
+    await sign(pp);
     await pp.locator('#submit').click();
     await pp.waitForTimeout(400);
     check('retrying after a good PIN succeeds', await pp.locator('#done').isVisible());

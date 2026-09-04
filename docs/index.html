@@ -136,6 +136,22 @@ body{
 
 /* ── Legal placeholders ──────────────────────────────────────────────────── */
 .items li.ph{border-top:none}
+
+/* Signature. Big enough to sign with a finger on a phone, and it keeps a
+   fixed aspect so the stroke does not stretch when the page is resized. */
+.field .hint{display:block;font-weight:400;font-size:.84rem;color:var(--muted);
+  margin:-2px 0 9px}
+.sigwrap{position:relative;border:1.5px solid var(--line);border-radius:11px;
+  background:#fdfcfb;overflow:hidden;touch-action:none}
+.sigwrap.bad{border-color:var(--red)}
+.sigwrap.signed{border-color:var(--good);background:#fff}
+#sigpad{display:block;width:100%;height:150px;cursor:crosshair;touch-action:none}
+.sigline{position:absolute;left:22px;right:22px;bottom:38px;height:1px;
+  background:var(--line);pointer-events:none}
+.sigclear{position:absolute;right:9px;bottom:8px;font:inherit;font-size:.78rem;
+  font-weight:600;padding:6px 12px;border:1px solid var(--line);border-radius:7px;
+  background:#fff;color:var(--muted);cursor:pointer}
+.sigclear:active{background:var(--red-wash)}
 .pending{padding:14px 18px;margin:10px 12px 12px;background:#fbfaf9;
   border:2px dashed #cfc8c2;border-radius:10px}
 .pending .tag{
@@ -321,6 +337,38 @@ footer a{color:var(--muted)}
       </div>
     </section>
 
+    <!-- The acknowledgment. This is a different kind of thing from the items
+         below it: they are conditions somebody verified, this is a commitment
+         somebody makes. It comes first because the items are what is being
+         committed TO - signing after ticking would read as an afterthought. -->
+    <section class="card" id="ack-card">
+      <div class="card-head"><h2>Crew boss acknowledgment</h2><div class="rule"></div></div>
+      <div class="fields">
+        <div class="field">
+          <div class="pending" id="ack-statement">
+            <span class="tag">Pending legal review</span>
+            <p>[LEGAL PLACEHOLDER — the acknowledgment a crew boss signs: that they
+            are the responsible person on this job, that they have read the
+            standards below, and that they will hold the crew to them. To be
+            drafted by counsel, who should also confirm this does not cut across
+            the independent-contractor arrangement.]</p>
+          </div>
+        </div>
+        <div class="field" id="f-sig">
+          <label for="sigpad">Sign here</label>
+          <p class="hint" id="sig-hint">Use a finger. This is taken before anyone
+          gets on the roof.</p>
+          <div class="sigwrap">
+            <canvas id="sigpad" width="900" height="260"
+                    aria-label="Signature area"></canvas>
+            <span class="sigline" aria-hidden="true"></span>
+            <button type="button" class="sigclear" id="sig-clear">Clear</button>
+          </div>
+          <p class="err" id="e-sig"></p>
+        </div>
+      </div>
+    </section>
+
     <!-- Categories are rendered from the CHECKLIST array below so the item text
          on the page is byte-identical to what the function validates. -->
     <div id="sections"></div>
@@ -488,6 +536,80 @@ footer a{color:var(--muted)}
   // ── Progress ──────────────────────────────────────────────────────────────
   $('p-all').textContent = String(boxes.length);
 
+
+  // ── Signature ─────────────────────────────────────────────────────────────
+  // A drawn signature, because that is what was asked for and because typing a
+  // name is not the same act. Pointer events cover finger, stylus and mouse in
+  // one path.
+  //
+  // IMPORTANT: the drawn image is NOT sent. See the payload below - this
+  // repository is public, and a signature is personal data that should not be
+  // published to the world. The record carries that a signature was taken, by
+  // whom and when. Turning image storage on is one line, and it comes AFTER the
+  // repo is private.
+  var sig = (function () {
+    var cv = $('sigpad'), ctx = cv.getContext('2d');
+    var drawing = false, dirty = false, last = null;
+
+    function size() {
+      // Redraw-safe resize: capture, resize, restore. Losing somebody's
+      // signature because they rotated the phone would be its own small insult.
+      var prev = dirty ? cv.toDataURL() : null;
+      var r = cv.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      cv.width = Math.max(1, Math.round(r.width * dpr));
+      cv.height = Math.max(1, Math.round(r.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#161515';
+      if (prev) {
+        var img = new Image();
+        img.onload = function () { ctx.drawImage(img, 0, 0, r.width, r.height); };
+        img.src = prev;
+      }
+    }
+    size();
+    window.addEventListener('resize', size);
+
+    function at(e) {
+      var r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    cv.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      cv.setPointerCapture(e.pointerId);
+      drawing = true; last = at(e);
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(last.x, last.y); ctx.stroke();
+      dirty = true;
+      $('f-sig').querySelector('.sigwrap').classList.remove('bad');
+      $('e-sig').classList.remove('show');
+      refresh();
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!drawing) return;
+      e.preventDefault();
+      var p = at(e);
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p;
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      cv.addEventListener(ev, function () { drawing = false; refresh(); });
+    });
+
+    $('sig-clear').addEventListener('click', function () {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      dirty = false;
+      refresh();
+    });
+
+    return {
+      signed: function () { return dirty; },
+      clear: function () { $('sig-clear').click(); }
+    };
+  })();
+
   function confirmedCount() {
     return boxes.filter(function (b) { return b.input.checked; }).length;
   }
@@ -498,7 +620,10 @@ footer a{color:var(--muted)}
     // Not 'done' -- that class belongs to the success card, whose display:none
     // rule would hide the bar at exactly the moment it fills.
     $('bar').classList.toggle('full', n === all);
-    var ready = n === all && $('crewBossName').value.trim() && $('jobAddress').value.trim();
+    var ready = n === all && sig.signed() &&
+      $('crewBossName').value.trim() && $('jobAddress').value.trim();
+    var wrap = $('f-sig').querySelector('.sigwrap');
+    wrap.classList.toggle('signed', sig.signed());
     submit.classList.toggle('idle', !ready);
 
     // A count from an earlier submit attempt goes stale the moment anything is
@@ -578,6 +703,14 @@ footer a{color:var(--muted)}
     }
 
     if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!sig.signed()) {
+      $('f-sig').querySelector('.sigwrap').classList.add('bad');
+      var es = $('e-sig');
+      es.textContent = 'Sign before sending. This is the part that makes the rest mean something.';
+      es.classList.add('show');
+      ok = false;
+    }
+
     return ok;
   }
 
@@ -611,6 +744,16 @@ footer a{color:var(--muted)}
       submittedAt: submittedAt,
       items: items,
       allConfirmed: confirmedCount() === boxes.length,
+      // The fact of a signature, deliberately not the image of one. This
+      // repository is public and a signature is personal data. When the repo is
+      // private, add the data URL here and to the function's validator.
+      acknowledgment: {
+        signed: true,
+        signedAt: submittedAt,
+        signerName: name,
+        statementVersion: 'placeholder-pending-legal-review',
+        imageStored: false
+      },
       prototype: true
     };
     if (PIN_REQUIRED) payload.pin = $('crewPin').value.trim();

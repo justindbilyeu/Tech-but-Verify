@@ -34,12 +34,25 @@ function goodItems(over = {}) {
       return rec;
     }));
 }
-function payload(o = {}) {
+function ack(o = {}) {
   return Object.assign({
-    crewBossName: 'John Smith',
+    signed: true,
+    signedAt: new Date().toISOString(),
+    signerName: 'John Smith',
+    statementVersion: 'placeholder-pending-legal-review',
+    imageStored: false
+  }, o);
+}
+function payload(o = {}) {
+  const name = o.crewBossName !== undefined ? o.crewBossName : 'John Smith';
+  return Object.assign({
+    crewBossName: name,
     jobAddress: '1204 Oak Hollow Dr, Houston, TX 77008',
     submittedAt: new Date().toISOString(),
     items: goodItems(o.__items || {}),
+    // The signer is the crew boss by definition, so it tracks whatever the
+    // test set - otherwise every name test would fail on the wrong assertion.
+    acknowledgment: ack(typeof name === 'string' ? { signerName: name } : {}),
     allConfirmed: true,
     prototype: true
   }, o);
@@ -229,6 +242,50 @@ function check(label, cond, extra) {
   r = await fn.handler(ev(payload()));
   check('malformed GITHUB_REPO -> 500', r.statusCode === 500, r.body);
   process.env.GITHUB_REPO = 'justindbilyeu/Tech-but-Verify';
+
+  console.log('\n10. the acknowledgment');
+  // The page will not let anybody past the signature pad, but the page is the
+  // friendly validator and not the only one. A submission that reaches here
+  // unsigned is refused rather than filed as if it had been.
+  const noAck = payload(); delete noAck.acknowledgment;
+  r = await fn.handler(ev(noAck));
+  check('no acknowledgment is refused', r.statusCode === 400 &&
+    /acknowledgment is required/.test(r.body), r.statusCode + ' ' + r.body);
+
+  r = await fn.handler(ev(payload({ acknowledgment: ack({ signed: false }) })));
+  check('signed:false is refused', r.statusCode === 400, r.body);
+
+  r = await fn.handler(ev(payload({ acknowledgment: ack({ signerName: 'Somebody Else' }) })));
+  check('a signer who is not the crew boss is refused',
+    r.statusCode === 400 && /must match crewBossName/.test(r.body), r.body);
+
+  r = await fn.handler(ev(payload({ acknowledgment: ack({ statementVersion: '' }) })));
+  check('an unversioned statement is refused', r.statusCode === 400, r.body);
+
+  // This repository is public. A drawn signature is personal data and does not
+  // belong in it. The refusal lives in the function so that turning storage on
+  // later is a deliberate act here, not an accident in the page.
+  r = await fn.handler(ev(payload({ acknowledgment: ack({ imageStored: true }) })));
+  check('a stored-image flag is refused while the repo is public',
+    r.statusCode === 400 && /not accepted while this repository is public/.test(r.body),
+    r.body);
+  r = await fn.handler(ev(payload({
+    acknowledgment: ack({ image: 'data:image/png;base64,iVBORw0KGgo=' }) })));
+  check('an actual image is refused too', r.statusCode === 400, r.body);
+
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  check('a signed submission is filed', r.statusCode === 200, r.statusCode + ' ' + r.body);
+  const filed = JSON.parse(Buffer.from(calls[0].body.content, 'base64').toString('utf8'));
+  check('the record carries that it was signed, by whom and when',
+    filed.acknowledgment.signed === true &&
+    filed.acknowledgment.signerName === 'John Smith' &&
+    typeof filed.acknowledgment.signedAt === 'string',
+    JSON.stringify(filed.acknowledgment));
+  check('and records that no image was stored',
+    filed.acknowledgment.imageStored === false);
+  check('no image reached the record by any route',
+    !JSON.stringify(filed).includes('data:image'));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);

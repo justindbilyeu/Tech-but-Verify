@@ -36,6 +36,24 @@ a stray curly apostrophe in one copy 400s every submission. That has happened.
   or one read from the query string would let somebody hand a crew boss a link
   that quietly posts the crew's details elsewhere. There is a test.
 
+## The acknowledgment is not a checklist item
+
+The signature card sits **above** the items, because the items are what is being
+committed to — signing after ticking would read as an afterthought. It is a
+different kind of thing from the thirteen below it: they are conditions somebody
+verified, this is a commitment somebody makes.
+
+**The drawn signature is never sent.** This repository is public and a signature
+is personal data. The record carries that a signature was taken, by whom, and
+when — the function refuses a payload containing an image or an `imageStored`
+flag, so that turning storage on later is a deliberate act in the function
+rather than an accident in the page. It happens **after** the repo is private,
+not before.
+
+The statement itself is a placeholder like the other two, and it says out loud
+that counsel should confirm it does not cut across the independent-contractor
+arrangement. Do not draft that language.
+
 ## Where it runs
 
 Pages are on GitHub Pages from `/docs`. The submit endpoint is a **Cloudflare

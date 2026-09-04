@@ -92,6 +92,23 @@ scope and the `ENDPOINT` in `docs/index.html` are all wired to the current
 names. Renaming while the deploy is half-finished breaks it for no gain. Cheap
 to change once it runs.
 
+## Before a real signature is collected
+
+The acknowledgment now takes a drawn signature. **The image is deliberately not
+stored**, because this repo is public and a signature is personal data. The
+record says a signature was taken, by whom and when.
+
+Two things have to happen before that changes, in this order:
+
+1. **Counsel writes the statement.** It is a placeholder and reads as unfinished
+   on purpose. It should also confirm that asking a subcontracted crew boss to
+   sign a commitment to TCR's standards does not cut across the
+   independent-contractor arrangement — a signed undertaking is exactly the
+   document that gets read closely in a classification dispute.
+2. **The repo goes private**, or submissions go somewhere that is not a public
+   repo. Only then is storing the image a reasonable thing to turn on, and the
+   function refuses it until somebody changes that file deliberately.
+
 ## Still open, and not blocking anything
 
 - **Legal.** Two checklist items are deliberate placeholders and render as
