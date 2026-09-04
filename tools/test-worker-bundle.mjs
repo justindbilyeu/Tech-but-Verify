@@ -37,8 +37,13 @@ function body(over) {
   const items = CANONICAL.categories.flatMap((c) => c.items.map((i) => ({
     id: i.id, text: i.text, confirmed: i.pendingLegalReview ? false : true
   })));
+  const name = (over && over.crewBossName) || 'Nuñez';
   return Object.assign({
-    crewBossName: 'Nuñez', jobAddress: '10817 Echo Cañón Dr, Austin, TX', items
+    crewBossName: name, jobAddress: '10817 Echo Cañón Dr, Austin, TX', items,
+    acknowledgment: {
+      signed: true, signedAt: '2026-09-04T13:00:00.000Z', signerName: name,
+      statementVersion: 'placeholder-pending-legal-review', imageStored: false
+    }
   }, over || {});
 }
 const post = (b, origin, env) => worker.fetch(new Request('https://x.dev/submit-checklist', {
