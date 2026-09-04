@@ -76,6 +76,22 @@ delete on GitHub whenever.
 
 ---
 
+## Naming — decided, not yet applied
+
+> **Square**, brought to you by **Tech but Verify** — a product of **JuiceWorks
+> Labs**.
+
+*Square* is the inspection tool in the sister repo. *Tech but Verify* is the
+house brand, and it is already this repo's name — it turns out to fit the whole
+thing rather than just the checklist. This checklist is a different product with
+a different user; it belongs under Tech but Verify but does not need to be
+called Square.
+
+**Nothing is renamed yet, on purpose.** The Worker, its build config, the PAT
+scope and the `ENDPOINT` in `docs/index.html` are all wired to the current
+names. Renaming while the deploy is half-finished breaks it for no gain. Cheap
+to change once it runs.
+
 ## Still open, and not blocking anything
 
 - **Legal.** Two checklist items are deliberate placeholders and render as
