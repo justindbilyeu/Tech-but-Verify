@@ -272,6 +272,49 @@ Netlify to a Cloudflare Worker without being rewritten.
 before there is much history — and worth asking the same lawyer, since these
 records cut both ways in a dispute.
 
+## Emailing the office
+
+Off by default. A filed checklist lands in `data/submissions/` either way; this
+sends a copy to whoever needs to see it that morning, laid out to be read on a
+phone — who signed, where, when, and every item with a tick beside it.
+
+Turn it on by setting two secrets on the Worker (Settings → Variables and
+Secrets, as **Secrets**, not plaintext variables):
+
+| Secret | What it is |
+|---|---|
+| `RESEND_API_KEY` | A key from [resend.com](https://resend.com). The free tier is 3,000 emails a month. |
+| `NOTIFY_TO` | Who gets it. Comma-separated for more than one. |
+| `NOTIFY_FROM` | Optional. Who it comes from — see below. |
+
+**`NOTIFY_TO` is a secret, not a `[vars]` entry and not a constant in the
+function.** This repository is public. Somebody's work email is personal data
+for the same reason a signature is, and it does not go in a file anyone can
+read.
+
+**About `NOTIFY_FROM`.** Resend will only send as a domain you have verified
+with them, which means adding DNS records for it. Until you do, leave
+`NOTIFY_FROM` unset and it falls back to Resend's shared sandbox sender — which
+delivers **only to the address that owns the Resend account**. That is enough
+to sign up, set the two secrets, submit a test checklist, and watch it arrive
+in your own inbox. It will not reach anyone else. Reaching the office needs a
+verified domain.
+
+**A failed send does not fail the submission.** The record is written to the
+repo first; the email goes out after it and is allowed to fail. Nothing about a
+mail outage should reject a crew boss standing on a driveway at half five in
+the morning — they cannot fix it, and a form that turns them away is a form
+that stops getting filled in. The response says which happened:
+
+```json
+{ "ok": true, "path": "data/submissions/...", "notified": "sent" }
+```
+
+`sent`, `skipped` (not configured) or `failed` (logged, with the reason, in the
+Worker's logs). The email is built from the record that was filed rather than
+from what the phone sent, so the inbox and the archive cannot disagree — and
+with PINs on it carries the roster name, never the typed one, and never the PIN.
+
 ## Crew boss PINs
 
 Off by default. To turn them on, do **both** of these together:
@@ -318,3 +361,7 @@ raising with the same lawyer.
   block anything here.
 - **Whether the two legal placeholders should become confirmable checkboxes**
   once counsel supplies real language. Right now they are deliberately not.
+- **A verified sending domain.** The email to the office works today, but until
+  a domain is verified with Resend it can only reach the Resend account owner.
+  That is a DNS record on whichever domain the mail should come from, and
+  whoever holds that DNS has to add it.

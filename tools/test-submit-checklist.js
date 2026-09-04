@@ -287,6 +287,139 @@ function check(label, cond, extra) {
   check('no image reached the record by any route',
     !JSON.stringify(filed).includes('data:image'));
 
+
+  // ── 11. the notification ────────────────────────────────────────────────
+  // Chanel gets an email the moment a checklist is filed. The record is still
+  // the file in the repo; this is a message about it, and it is allowed to
+  // fail without taking the submission down with it.
+  console.log('\n11. the notification to the office');
+
+  const mailOf = (c) => c.find((x) => /resend\.com/.test(x.url));
+
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  check('with nothing configured, no mail is attempted',
+    r.statusCode === 200 && calls.length === 1 && !mailOf(calls));
+  check('and the response says so plainly',
+    JSON.parse(r.body).notified === 'skipped', r.body);
+
+  process.env.RESEND_API_KEY = 're_faketoken';
+  process.env.NOTIFY_TO = 'chanel@example.com';
+
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  const mail = mailOf(calls);
+  check('configured, it sends one', r.statusCode === 200 && !!mail && calls.length === 2,
+    r.statusCode + ' calls=' + calls.length);
+  check('the response says it went', JSON.parse(r.body).notified === 'sent', r.body);
+  check('with the key as a bearer token',
+    mail.headers.Authorization === 'Bearer re_faketoken');
+  check('to the configured address', JSON.stringify(mail.body.to) === '["chanel@example.com"]',
+    JSON.stringify(mail.body.to));
+
+  check('the subject names the crew boss and the address',
+    /John Smith/.test(mail.body.subject) && /Oak Hollow/.test(mail.body.subject),
+    mail.body.subject);
+  check('every checklist item is in the text',
+    CANON.categories.every((c) => c.items.every((i) => mail.body.text.includes(i.text))));
+  // A placeholder is not a failed item and must not read as one: [-] rather
+  // than an empty box, plus a line at the bottom saying what it means.
+  check('the two placeholders are marked unconfirmable, not failed',
+    (mail.body.text.match(/^ {2}\[-\] /gm) || []).length === 2 &&
+    /\[-\] marks the placeholders/.test(mail.body.text),
+    (mail.body.text.match(/^ {2}\[-\] /gm) || []).length + ' marked items');
+  check('and no confirmed item is marked as missed',
+    !/^ {2}\[ \] /m.test(mail.body.text));
+  check('the signature is described, never attached',
+    /signature is not stored/.test(mail.body.text) &&
+    !/data:image/.test(JSON.stringify(mail.body)));
+  check('it links to the filed record',
+    mail.body.text.includes('https://github.com/justindbilyeu/Tech-but-Verify/blob/'));
+  check('an HTML part goes along with it',
+    typeof mail.body.html === 'string' && mail.body.html.includes('John Smith'));
+
+  // The GitHub write comes first on purpose. If mail were sent first, a mail
+  // outage would be reported to nobody and the record might not exist.
+  check('the record was written before the mail went out',
+    /api\.github\.com/.test(calls[0].url) && /resend\.com/.test(calls[1].url),
+    calls.map((c) => c.url).join(' then '));
+
+  // A checklist that is filed but not announced is a smaller problem than a
+  // crew boss who cannot file one. The submission stands.
+  calls = []; nextStatus = [201, 500];
+  r = await fn.handler(ev(payload()));
+  check('a refused send does NOT fail the submission', r.statusCode === 200, r.statusCode);
+  check('but the response names it', JSON.parse(r.body).notified === 'failed', r.body);
+  check('and the record is still in the repo',
+    calls.length === 2 && /api\.github\.com/.test(calls[0].url));
+
+  // A GitHub failure is a different matter: there is no record to announce.
+  calls = []; nextStatus = [401];
+  r = await fn.handler(ev(payload()));
+  check('no mail goes out when nothing was filed',
+    r.statusCode === 502 && !mailOf(calls), r.statusCode + ' calls=' + calls.length);
+
+  process.env.NOTIFY_TO = 'chanel@example.com, not-an-address, david@example.com';
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  check('a junk entry in NOTIFY_TO is dropped, the good ones still get it',
+    JSON.stringify(mailOf(calls).body.to) ===
+      '["chanel@example.com","david@example.com"]',
+    JSON.stringify(mailOf(calls).body.to));
+
+  process.env.NOTIFY_TO = 'not-an-address';
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload()));
+  check('and if none of them survive, nothing is sent to nobody',
+    r.statusCode === 200 && !mailOf(calls) &&
+    JSON.parse(r.body).notified === 'skipped', r.body);
+
+  // The PIN never reaches the record; it must not reach the inbox either.
+  process.env.NOTIFY_TO = 'chanel@example.com';
+  process.env.CREW_PINS = '{"481027":"Ana Reyes"}';
+  calls = []; nextStatus = [201];
+  r = await fn.handler(ev(payload({ crewBossName: 'Someone Else', pin: '481027' })));
+  const pinMail = mailOf(calls);
+  check('the roster name is the one in the email, not the typed one',
+    /Ana Reyes/.test(pinMail.body.subject) && !/Someone Else/.test(pinMail.body.text),
+    pinMail.body.subject);
+  check('the PIN is nowhere in the email',
+    !JSON.stringify(pinMail.body).includes('481027'));
+  delete process.env.CREW_PINS;
+
+  // A Subject is one line, and both halves of this one are free text off a
+  // phone. A newline there would end the header and let the rest be read as
+  // headers of its own.
+  calls = []; nextStatus = [201];
+  await fn.handler(ev(payload({
+    crewBossName: 'John\nBcc: someone@elsewhere.example',
+    jobAddress: '1204 Oak Hollow Dr\r\nX-Injected: yes'
+  })));
+  const subj = mailOf(calls).body.subject;
+  check('a newline in the name or address cannot split the Subject',
+    !/[\r\n]/.test(subj), JSON.stringify(subj));
+  check('and what was after it is still there, as text',
+    /Bcc: someone@elsewhere.example/.test(subj) && /X-Injected/.test(subj), subj);
+
+  // new Date(null) is the epoch, so an absent timestamp used to read as a
+  // confident "1 Jan 1970".
+  calls = []; nextStatus = [201];
+  await fn.handler(ev(payload({ acknowledgment: ack({ signedAt: undefined }) })));
+  const noStamp = mailOf(calls).body.text;
+  check('a missing signing time says unknown, not 1970',
+    /Signed\s+unknown/.test(noStamp) && !/1970/.test(noStamp),
+    (noStamp.match(/Signed.*/) || [''])[0]);
+
+  const sender = 'TCR <checklist@texaschoiceroofing.example>';
+  process.env.NOTIFY_FROM = sender;
+  calls = []; nextStatus = [201];
+  await fn.handler(ev(payload()));
+  check('NOTIFY_FROM sets the sender', mailOf(calls).body.from === sender);
+  delete process.env.NOTIFY_FROM;
+
+  delete process.env.RESEND_API_KEY;
+  delete process.env.NOTIFY_TO;
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();

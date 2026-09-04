@@ -210,6 +210,9 @@ const exports = module.exports;
   //   GITHUB_BRANCH   optional, defaults to the repo default branch
   //   ALLOWED_ORIGIN  optional, overrides the Pages origin allowed below
   //   CREW_PINS       optional, turns on per-crew-boss PINs (see roster() below)
+  //   RESEND_API_KEY  optional, turns on the email notification (see notify())
+  //   NOTIFY_TO       optional, who that email goes to, comma-separated
+  //   NOTIFY_FROM     optional, the sender it goes out as
   
   // The checklist, inlined rather than required from checklist-items.json at the
   // repo root. This file is deployed on its own into the juiceworks-api Netlify
@@ -449,6 +452,211 @@ const exports = module.exports;
     return { ok: res.ok, status: res.status, text: await res.text() };
   }
   
+  // ── Notification (optional) ─────────────────────────────────────────────────
+  
+  // A filed checklist is a record; an email is a notification about one. The
+  // record is the JSON file in the repo and it is written first. This runs after
+  // it, and cannot turn a filed checklist into an error -- see the handler.
+  //
+  //   RESEND_API_KEY  an API key from resend.com. Unset = no email is sent.
+  //   NOTIFY_TO       who gets it, comma-separated. Unset = no email is sent.
+  //   NOTIFY_FROM     the sender. Resend will only send as a domain you have
+  //                   verified with them. Defaults to their shared sandbox
+  //                   address, which delivers ONLY to the address that owns the
+  //                   Resend account -- enough to see it work, no use for
+  //                   telling anybody else.
+  //
+  // The recipients are an environment value rather than a constant in this file
+  // because this repository is public, and somebody's work email is personal
+  // data for the same reason a signature is.
+  
+  const MAX_RECIPIENTS = 10;
+  const DEFAULT_FROM = 'TCR Checklist <onboarding@resend.dev>';
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Deliberately loose. This is here to catch a stray comma or a pasted display
+  // name, not to adjudicate RFC 5322. A bad entry is dropped and logged rather
+  // than failing the send for the addresses that were fine.
+  function recipients() {
+    const raw = process.env.NOTIFY_TO;
+    if (!raw || !raw.trim()) return [];
+    const all = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    const good = all.filter(function (a) { return /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(a); });
+    if (good.length !== all.length) {
+      console.error('submit-checklist: NOTIFY_TO has ' + (all.length - good.length) +
+                    ' entry/entries that are not email addresses; they were dropped');
+    }
+    return good.slice(0, MAX_RECIPIENTS);
+  }
+  
+  function oneline(s) {
+    return String(s).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  
+  // "2026-09-04T13:02:11.000Z" -> "4 Sep 2026, 13:02 UTC". Spelled out because a
+  // person reads this on a phone, and an ISO string reads like a machine talking.
+  function human(iso) {
+    // new Date(null) is the epoch, not an invalid date. Without this an absent
+    // timestamp reads as "1 Jan 1970" -- a confident wrong answer.
+    if (iso === null || iso === undefined || iso === '') return 'unknown';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso == null ? 'unknown' : iso);
+    return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear() +
+           ', ' + String(d.getUTCHours()).padStart(2, '0') + ':' +
+           String(d.getUTCMinutes()).padStart(2, '0') + ' UTC';
+  }
+  
+  // Built from the record that was filed, not from the payload that arrived, so
+  // the email says the same thing the archive does -- canonical item text, roster
+  // name, server timestamp. If the two could disagree the email would be the one
+  // people trusted, and it would be the wrong one.
+  function compose(record, repo, branch, path) {
+    const link = 'https://github.com/' + repo + '/blob/' + (branch || 'HEAD') + '/' + path;
+    // A Subject is one line. crewBossName and jobAddress are free text a phone
+    // sent, and a newline in either would end the header early and let whatever
+    // followed be read as headers of its own. Flatten before, not after.
+    const subject = oneline('Pre-job checklist: ' + record.crewBossName +
+                            ' at ' + record.jobAddress);
+  
+    const facts = [
+      ['Crew boss', record.crewBossName],
+      ['Job address', record.jobAddress],
+      ['Signed', human(record.acknowledgment.signedAt)],
+      ['Filed', human(record.submittedAt)],
+      ['Identity', record.identityVerified
+        ? 'PIN verified against the roster'
+        : 'no PIN roster configured']
+    ];
+  
+    const mark = function (it) {
+      return it.pendingLegalReview ? '[-]' : (it.confirmed ? '[x]' : '[ ]');
+    };
+  
+    const lines = [];
+    lines.push(record.crewBossName +
+               ' signed the pre-job acknowledgment and filed the checklist.');
+    lines.push('');
+    facts.forEach(function (f) {
+      lines.push('  ' + (f[0] + '              ').slice(0, 14) + f[1]);
+    });
+    lines.push('');
+    lines.push(record.allConfirmed
+      ? 'Every item was confirmed.'
+      : 'NOT every item was confirmed. See below.');
+    lines.push('');
+  
+    let cat = null;
+    record.items.forEach(function (it) {
+      if (it.category !== cat) { cat = it.category; lines.push(cat); }
+      lines.push('  ' + mark(it) + ' ' + it.text);
+    });
+  
+    lines.push('');
+    lines.push('[-] marks the placeholders that are still waiting on counsel. They');
+    lines.push('cannot be confirmed by anyone yet, and the acknowledgment statement');
+    lines.push('itself is a placeholder too.');
+    lines.push('');
+    lines.push('The drawn signature is not stored. This record carries that one was');
+    lines.push('taken, by whom, and when.');
+    lines.push('');
+    lines.push('Record: ' + link);
+  
+    const rows = facts.map(function (f) {
+      return '<tr><td style="padding:2px 14px 2px 0;color:#666;white-space:nowrap;' +
+             'vertical-align:top">' + esc(f[0]) + '</td><td style="padding:2px 0">' +
+             esc(f[1]) + '</td></tr>';
+    }).join('');
+  
+    let items = '';
+    cat = null;
+    record.items.forEach(function (it) {
+      if (it.category !== cat) {
+        cat = it.category;
+        items += '<p style="margin:14px 0 4px;font-weight:600">' + esc(cat) + '</p>';
+      }
+      const box = it.pendingLegalReview ? '&#9744;' : (it.confirmed ? '&#10003;' : '&#10007;');
+      const colour = it.pendingLegalReview ? '#9a7b00' : (it.confirmed ? '#1a7f37' : '#b42318');
+      items += '<div style="margin:2px 0"><span style="color:' + colour +
+               ';font-weight:700">' + box + '</span> ' + esc(it.text) + '</div>';
+    });
+  
+    const html =
+      '<div style="font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
+      'color:#111;max-width:640px">' +
+      '<p style="margin:0 0 12px">' + esc(record.crewBossName) +
+      ' signed the pre-job acknowledgment and filed the checklist.</p>' +
+      '<table style="border-collapse:collapse;margin:0 0 14px">' + rows + '</table>' +
+      '<p style="margin:0 0 4px;font-weight:600;color:' +
+      (record.allConfirmed ? '#1a7f37' : '#b42318') + '">' +
+      (record.allConfirmed ? 'Every item was confirmed.'
+                           : 'NOT every item was confirmed.') + '</p>' +
+      items +
+      '<p style="margin:16px 0 0;color:#666;font-size:13px">The empty boxes are the ' +
+      'placeholders still waiting on counsel; nobody can confirm one yet, and the ' +
+      'acknowledgment statement is a placeholder too.</p>' +
+      '<p style="margin:8px 0 0;color:#666;font-size:13px">The drawn signature is not ' +
+      'stored. This record carries that one was taken, by whom, and when.</p>' +
+      '<p style="margin:14px 0 0"><a href="' + esc(link) + '">The filed record</a></p>' +
+      '</div>';
+  
+    return { subject: subject, text: lines.join('\n') + '\n', html: html };
+  }
+  
+  // A hung mail API must not hold a crew boss on a spinner. Not every runtime has
+  // AbortSignal.timeout; where it is missing the send simply has no deadline of
+  // its own, which is the behaviour there was before this existed.
+  function deadline(ms) {
+    return (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+      ? AbortSignal.timeout(ms) : undefined;
+  }
+  
+  // Returns 'sent', 'skipped' (not configured) or 'failed'. Never throws.
+  async function notify(record, repo, branch, path) {
+    const key = process.env.RESEND_API_KEY;
+    const to = recipients();
+    if (!key || !to.length) return 'skipped';
+  
+    const from = (process.env.NOTIFY_FROM || '').trim() || DEFAULT_FROM;
+    const mail = compose(record, repo, branch, path);
+  
+    let res;
+    try {
+      res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + key,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: from, to: to, subject: mail.subject,
+          text: mail.text, html: mail.html
+        }),
+        signal: deadline(8000)
+      });
+    } catch (e) {
+      console.error('submit-checklist: notification did not send',
+                    String((e && e.message) || e));
+      return 'failed';
+    }
+  
+    if (!res.ok) {
+      // Resend names the sender and the key's account in its errors. Log it,
+      // do not hand it to the phone.
+      let detail = '';
+      try { detail = (await res.text()).slice(0, 300); } catch (e) { detail = ''; }
+      console.error('submit-checklist: notification refused', res.status, detail);
+      return 'failed';
+    }
+    return 'sent';
+  }
+  
   // ── Handler ─────────────────────────────────────────────────────────────────
   
   exports.handler = async function (event) {
@@ -583,11 +791,23 @@ const exports = module.exports;
       return reply(502, headers, { error: 'Could not file the checklist. Please try again.' });
     }
   
-    return reply(200, headers, { ok: true, path: path, submittedAt: record.submittedAt });
+    // The record is filed. Nothing past this point may turn that into an error on
+    // a crew boss's phone: they cannot fix a mail outage, and a form that fails
+    // at half five in the morning is a form that stops getting filled in. A
+    // failure to notify is logged and named in the response, never raised -- the
+    // file in the repo is the record, the email is only a message about it.
+    const notified = await notify(record, repo, branch, path);
+  
+    return reply(200, headers, {
+      ok: true, path: path, submittedAt: record.submittedAt, notified: notified
+    });
   };
   
   // Exported for tests.
-  exports._internal = { norm: norm, slug: slug, validate: validate, canonical: CANONICAL };
+  exports._internal = {
+    norm: norm, slug: slug, validate: validate, canonical: CANONICAL,
+    recipients: recipients, compose: compose, notify: notify
+  };
 }
 
 export default toWorker(module.exports.handler);

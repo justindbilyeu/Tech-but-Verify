@@ -188,6 +188,30 @@ check('an unsigned submission is refused through the adapter',
 check('and a signed one is not',
   (await post(body())).status === 200);
 
+// The notification reads three more values out of process.env, which on a
+// Worker means three more secret bindings. This is exactly the seam the adapter
+// exists to cover, so it is checked here rather than assumed.
+calls.length = 0;
+let res = await post(body(), undefined, Object.assign({
+  RESEND_API_KEY: 're_binding', NOTIFY_TO: 'chanel@example.com'
+}, ENV));
+const mail = calls.find((c) => /resend\.com/.test(c.url));
+check('a secret binding turns the email on', res.status === 200 && !!mail,
+  res.status + ' calls=' + calls.length);
+check('and the key travelled with it',
+  mail && mail.opts.headers.Authorization === 'Bearer re_binding');
+check('the email names the crew boss with the accent intact',
+  mail && /Nuñez/.test(JSON.parse(mail.opts.body).subject),
+  mail && JSON.parse(mail.opts.body).subject);
+
+// A binding that goes away must take the behaviour with it, the same as every
+// other one - an isolate that kept mailing after the key was removed would be
+// sending a crew's details somewhere nobody meant it to go.
+calls.length = 0;
+res = await post(body());
+check('and removing the binding stops it, on the very next request',
+  res.status === 200 && !calls.some((c) => /resend\.com/.test(c.url)));
+
 console.log('\n7. PINs still fail closed on a binding');
 // The roster reads process.env.CREW_PINS. On a Worker that arrives as a secret
 // binding, and the rule that a malformed roster locks the door rather than

@@ -54,6 +54,25 @@ The statement itself is a placeholder like the other two, and it says out loud
 that counsel should confirm it does not cut across the independent-contractor
 arrangement. Do not draft that language.
 
+## The email is a notification, not the record
+
+The record is the JSON file in `data/submissions/`. It is written first, and
+the email goes out after it, from the record rather than from the payload, so
+the inbox and the archive cannot tell different stories.
+
+**A failed send does not fail the submission.** Everywhere else in this
+function an ambiguous state fails closed; here it does not, and that is
+deliberate. A crew boss at half five in the morning cannot fix a mail outage,
+and a form that rejects them is a form that stops getting filled in. The
+failure is logged and named in the response as `notified: 'failed'`. Unset
+credentials are `'skipped'`, not an error — the whole feature is off until
+`RESEND_API_KEY` and `NOTIFY_TO` are both set.
+
+**`NOTIFY_TO` is never in the repo.** It is a secret binding for the same
+reason the signature is never sent: this repository is public, and somebody's
+work email is personal data. A constant in the function would be the easy
+version and the wrong one.
+
 ## Where it runs
 
 Pages are on GitHub Pages from `/docs`. The submit endpoint is a **Cloudflare
